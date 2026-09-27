@@ -381,6 +381,23 @@ mod tests {
         assert_eq!(j.details()["frames"], 3);
     }
 
+    /// Verbatim from AA Base's mockup server (AAB_design/mockup/serve.py, 2026-09-27): the shape
+    /// AAB actually sends must keep parsing.
+    #[test]
+    fn parses_aab_mockup_manifest() {
+        let raw = br#"{"version": 1, "op": "video_to_png", "job_id": "ef38be1f59d35899fd8e4937ba06e6ac",
+            "title": "Harbour plate \u2014 \u21163",
+            "input": {"url": "http://127.0.0.1:8741/aab-media/sample/proxy.mp4",
+                      "filename": "Harbour plate.mp4", "size": 1095180, "expires_at": 1790529650},
+            "params": {"frames": 192, "width": 1280, "height": 720, "fps": 24}}"#;
+        let (env, doc) = manifest::parse(raw).unwrap();
+        let job = match crate::ops::prepare(&env, doc).unwrap() {
+            crate::ops::Job::VideoToPng(j) => j,
+        };
+        assert_eq!(env.title.as_deref(), Some("Harbour plate — №3"));
+        assert_eq!((job.size, job.params.frames, job.expires_at), (1095180, 192, Some(1790529650)));
+    }
+
     #[test]
     fn rejects_bad_input() {
         assert!(Job::from_manifest(manifest("https://evil.example/a.mov", "a.mov")).is_err());
