@@ -62,13 +62,15 @@ fn open_output(app: AppHandle) -> Result<(), String> {
     app.opener().open_path(frames_dir, None::<&str>).map_err(|e| e.to_string())
 }
 
-/// The window follows its content's height; the webview reports it after every layout change.
+/// The window follows its content: the webview reports how many CSS pixels it is short
+/// (positive) or over (negative), and the window's inner height changes by that much.
 #[tauri::command]
-fn fit_window(window: tauri::WebviewWindow, height: f64) -> Result<(), String> {
+fn fit_window(window: tauri::WebviewWindow, delta: f64) -> Result<(), String> {
     let scale = window.scale_factor().map_err(|e| e.to_string())?;
-    let width = window.inner_size().map_err(|e| e.to_string())?.to_logical::<f64>(scale).width;
+    let inner = window.inner_size().map_err(|e| e.to_string())?.to_logical::<f64>(scale);
+    let height = (inner.height + delta).clamp(160.0, 900.0).round();
     window
-        .set_size(tauri::LogicalSize::new(width, height.clamp(160.0, 900.0).ceil()))
+        .set_size(tauri::LogicalSize::new(inner.width, height))
         .map_err(|e| e.to_string())
 }
 

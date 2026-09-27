@@ -1,0 +1,58 @@
+<!doctype html>
+<!-- Dev-only: the real UI with Tauri IPC mocked, for checking layout in a browser.
+     npm run dev, then open http://localhost:1420/tools/preview.html?state=ready -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <style>html { width: 460px; outline: 1px dashed #555; }</style>
+    <title>Ranomaly Ext — preview</title>
+    <script>
+      const state = new URLSearchParams(location.search).get("state") || "ready";
+      const manifest = {
+        op: "video_to_png", job_id: "mock_1790504119", title: "Mock job — shot 012 plate ü.mov",
+        input: { filename: "shot 012 plate ü.mov", size: 131559347, sha256: null },
+        params: { frames: 120, width: 3840, height: 2160, fps: 24, pix_fmt: "yuv422p10le" },
+        input_expires_at: Date.now() / 1000 + 6 * 3600,
+      };
+      const views = {
+        idle: { state: "idle" },
+        failed: { state: "failed", message: "the download link has expired — start again from AAB" },
+        ready: { state: "ready", manifest, source_high_bit: true, source_alpha: false },
+        running: { state: "running", title: manifest.title, stage: "decode" },
+        partial: { state: "partial", title: manifest.title, message: "Cancelled.", written: 37, frames_dir: "/Volumes/Base_Storage/Downloads/rife_stress/shot 012 plate ü" },
+        done: { state: "done", title: manifest.title, frames_dir: "/Volumes/Base_Storage/Downloads/rife_stress/shot 012 plate ü", frames: 120, expected: 120, video: "/Volumes/Base_Storage/Downloads/rife_stress/shot 012 plate ü.mov", warning: null },
+      };
+      const handlers = {};
+      let cbId = 0;
+      window.__TAURI_INTERNALS__ = {
+        transformCallback: (cb) => { const id = ++cbId; window["_" + id] = cb; return id; },
+        invoke: async (cmd, args) => {
+          console.log("[preview]", cmd, JSON.stringify(args));
+          switch (cmd) {
+            case "get_view": return views[state];
+            case "pick_folder": return "/Volumes/Base_Storage/Downloads/rife_stress";
+            case "check_disk": return { verdict: "ok", frames_low: 1.2e9, frames_high: 2.9e9, video: 131559347,
+              volumes: [{ path: "/", free: 933e9, need_low: 1.3e9, need_high: 3e9 }] };
+            case "plugin:event|listen": handlers[args.event] = args.handler; return args.handler;
+            default: return null;
+          }
+        },
+      };
+      // Layout numbers for headless checks: chrome --dump-dom shows them on <html data-layout>.
+      setTimeout(() => {
+        const app = document.getElementById("app");
+        const wide = [...document.querySelectorAll("#app *")].filter((e) => e.getBoundingClientRect().right > innerWidth + 0.5)
+          .map((e) => e.tagName + "." + e.className + "=" + Math.round(e.getBoundingClientRect().right)).slice(0, 8);
+        document.documentElement.dataset.layout = JSON.stringify({ vw: innerWidth, vh: innerHeight,
+          app: Math.ceil(app.getBoundingClientRect().height), scrollW: document.documentElement.scrollWidth, wide });
+      }, 1500);
+      window.__previewProgress = (done, total) => window["_" + handlers.progress]?.({ payload: { stage: "decode", done, total } });
+    </script>
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <main id="app"></main>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

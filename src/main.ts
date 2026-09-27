@@ -70,11 +70,19 @@ function duration(s: number): string {
 }
 
 let toastTimer = 0;
-function toast(msg: string) {
-  toastEl.textContent = msg;
-  toastEl.classList.add("show");
+let toastHover = false;
+toastEl.onmouseenter = () => { toastHover = true; clearTimeout(toastTimer); };
+toastEl.onmouseleave = () => { toastHover = false; hideToastLater(); };
+function hideToastLater() {
   clearTimeout(toastTimer);
-  toastTimer = window.setTimeout(() => toastEl.classList.remove("show"), 5000);
+  toastTimer = window.setTimeout(() => { if (!toastHover) toastEl.classList.remove("show"); }, 6000);
+}
+function toast(msg: string) {
+  toastEl.textContent = cap(msg);
+  toastEl.classList.remove("show");
+  void toastEl.offsetWidth;
+  toastEl.classList.add("show");
+  hideToastLater();
 }
 
 async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T | undefined> {
@@ -86,6 +94,9 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T |
   }
 }
 
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const label = (text: string) => h("span", { class: "label" }, text);
+
 // ---------------------------------------------------------------- views
 
 let view: View = { state: "idle" };
@@ -94,50 +105,53 @@ let expiryTimer = 0;
 function render(v: View) {
   view = v;
   clearInterval(expiryTimer);
-  app.replaceChildren(...build(v));
+  app.replaceChildren(...build(v).filter((n): n is Node => !!n));
 }
 
-function build(v: View): Node[] {
+function build(v: View): (Node | false | null | undefined | "")[] {
   switch (v.state) {
     case "idle":
       return [h("div", { class: "centre" },
         h("h1", {}, "Waiting for AAB"),
-        h("p", { class: "muted" }, "Start a job from AAB and it will open here."))];
+        h("p", { class: "muted small" }, "Start a job from AAB and it opens here."))];
     case "loading":
-      return [h("div", { class: "centre" },
-        h("p", { class: "muted" }, "Reading the request…"),
-        h("div", { class: "meter busy loading" }, h("div")))];
-    case "failed":
-      return [h("div", { class: "centre" },
-        h("h1", {}, v.message === "Cancelled." ? "Cancelled" : "Something went wrong"),
-        v.message !== "Cancelled." && h("p", { class: "error" }, v.message),
-        h("button", { onclick: () => call("dismiss") }, "Close"))];
+      return [h("div", { class: "centre" }, h("p", { class: "muted small" }, "Reading the request…"))];
+    case "failed": {
+      const cancelled = v.message === "Cancelled.";
+      return [
+        h("h1", {}, cancelled ? "Cancelled" : "Could not run this job"),
+        !cancelled && h("div", { class: "card" }, h("p", { class: "error small" }, cap(v.message))),
+        h("div", { class: "actions" },
+          h("button", { class: "secondary", onclick: () => call("dismiss") }, "Close")),
+      ];
+    }
     case "ready":
-      return buildReady(v.manifest, v.source_high_bit, v.source_alpha);
+      return buildReady(v.manifest, v.source_alpha);
     case "running":
       return buildRunning(v.title, v.stage);
     case "partial":
       return [
         h("h1", {}, v.title),
         h("div", { class: "card" },
-          h("p", { class: v.message === "Cancelled." ? "" : "error" }, v.message),
-          h("p", {}, `${v.written} frame${v.written === 1 ? " was" : "s were"} already written to:`),
-          h("p", { class: "small muted" }, v.frames_dir)),
+          v.message !== "Cancelled." && h("p", { class: "error small" }, cap(v.message)),
+          h("dl", { class: "facts" },
+            h("dt", {}, "Written"), h("dd", { class: "num" }, `${v.written.toLocaleString()} frames`),
+            h("dt", {}, "Folder"), h("dd", {}, v.frames_dir))),
         h("div", { class: "actions" },
-          h("button", { class: "danger", onclick: () => call("resolve_partial", { keep: false }) }, "Delete frames"),
+          h("button", { class: "secondary danger", onclick: () => call("resolve_partial", { keep: false }) }, "Delete frames"),
           h("button", { class: "primary", onclick: () => call("resolve_partial", { keep: true }) }, "Keep frames")),
       ];
     case "done":
       return [
         h("h1", {}, v.title || "Done"),
         h("div", { class: "card" },
-          h("p", {}, `${v.frames.toLocaleString()} frames written.`),
-          v.warning && h("p", { class: "warning" }, v.warning),
           h("dl", { class: "facts" },
-            h("dt", {}, "Frames"), h("dd", {}, v.frames_dir),
-            v.video && h("dt", {}, "Video"), v.video && h("dd", {}, v.video))),
+            h("dt", {}, "Frames"), h("dd", { class: "num" }, v.frames.toLocaleString()),
+            h("dt", {}, "Folder"), h("dd", {}, v.frames_dir),
+            v.video && h("dt", {}, "Video"), v.video && h("dd", {}, v.video)),
+          v.warning && h("p", { class: "small" }, v.warning)),
         h("div", { class: "actions" },
-          h("button", { onclick: () => call("dismiss") }, "Done"),
+          h("button", { class: "secondary", onclick: () => call("dismiss") }, "Done"),
           h("button", { class: "primary", onclick: () => call("open_output") }, "Open folder")),
       ];
   }
@@ -145,108 +159,107 @@ function build(v: View): Node[] {
 
 // ---- ready: collect the user's choices
 
-function buildReady(m: Manifest, _highBit: boolean, alpha: boolean): Node[] {
+function buildReady(m: Manifest, alpha: boolean): Node[] {
   const opts: StartOptions = { frames_parent: "", keep_video: false, video_dir: null, depth: "eight" };
   const p = m.params;
 
-  const expiry = h("dd", {});
+  const expiry = h("dd", { class: "num" });
   const updateExpiry = () => {
     if (!m.input_expires_at) { expiry.textContent = "—"; return; }
     const left = m.input_expires_at - Date.now() / 1000;
     expiry.textContent = left > 0 ? `in ${duration(left)}` : "expired — start again from AAB";
-    expiry.className = left > 0 ? (left < 600 ? "warning" : "") : "error";
+    expiry.className = left > 0 ? (left < 600 ? "num warn" : "num") : "error";
   };
   updateExpiry();
   expiryTimer = window.setInterval(updateExpiry, 1000);
 
   const facts = h("dl", { class: "facts" },
     h("dt", {}, "File"), h("dd", {}, m.input.filename),
-    h("dt", {}, "Size"), h("dd", {}, bytes(m.input.size)),
-    h("dt", {}, "Frames"), h("dd", {}, `${p.frames.toLocaleString()} · ${p.width}×${p.height}${p.fps ? ` · ${p.fps} fps` : ""}`),
-    p.pix_fmt && h("dt", {}, "Format"), p.pix_fmt && h("dd", {}, p.pix_fmt),
-    h("dt", {}, "Link expires"), expiry,
-    m.job_id && h("dt", {}, "Job"), m.job_id && h("dd", { class: "muted" }, m.job_id));
+    h("dt", {}, "Size"), h("dd", { class: "num" }, bytes(m.input.size)),
+    h("dt", {}, "Frames"), h("dd", { class: "num" }, `${p.frames.toLocaleString()} · ${p.width}×${p.height}${p.fps ? ` · ${p.fps} fps` : ""}`),
+    p.pix_fmt && h("dt", {}, "Format"), p.pix_fmt && h("dd", { class: "num" }, p.pix_fmt),
+    h("dt", {}, "Link"), expiry,
+    m.job_id && h("dt", {}, "Job"), m.job_id && h("dd", { class: "num muted" }, m.job_id));
 
-  const framesPath = h("div", { class: "path empty", title: "" }, "No folder chosen");
-  const videoPath = h("div", { class: "path empty" }, "Same as frames folder");
-  const setPath = (el: HTMLElement, path: string | null, empty: string) => {
-    el.textContent = path ? `\u200E${path}\u200E` : empty;
+  const framesPath = h("div", { class: "path empty" }, "No folder chosen");
+  const videoPath = h("div", { class: "path empty" }, "No folder chosen");
+  const setPath = (el: HTMLElement, path: string | null) => {
+    el.textContent = path ? `\u200E${path}\u200E` : "No folder chosen";
     el.title = path ?? "";
     el.classList.toggle("empty", !path);
   };
+  const choose = (title: string, set: (d: string) => void) =>
+    h("button", { onclick: async () => {
+      const d = await call<string | null>("pick_folder", { title });
+      if (d) { set(d); refresh(); }
+    } }, "Choose…");
 
-  const keep = h("input", { type: "checkbox", id: "keep" });
+  const keep = h("input", { type: "checkbox", class: "toggle", id: "keep" });
   const videoField = h("div", { class: "field", hidden: true },
-    h("label", {}, "Save the video in"),
+    label("Video folder"),
     h("div", { class: "picker" }, videoPath,
-      h("button", { onclick: async () => {
-        const d = await call<string | null>("pick_folder", { title: "Where should the video be saved?" });
-        if (d) { opts.video_dir = d; setPath(videoPath, d, ""); refresh(); }
-      } }, "Choose…")));
+      choose("Where should the video be saved?", (d) => { opts.video_dir = d; setPath(videoPath, d); })));
   keep.onchange = () => {
     opts.keep_video = keep.checked;
     videoField.hidden = !keep.checked;
     if (keep.checked && !opts.video_dir && opts.frames_parent) {
       opts.video_dir = opts.frames_parent;
-      setPath(videoPath, opts.video_dir, "");
+      setPath(videoPath, opts.video_dir);
     }
     refresh();
   };
 
-  const alphaNote = alpha ? " + alpha" : "";
-  const depth = h("select", {},
-    h("option", { value: "eight" }, `8-bit${alphaNote}`),
-    h("option", { value: "sixteen" }, `16-bit${alphaNote}`));
-  depth.onchange = () => { opts.depth = depth.value as Depth; refresh(); };
+  const suffix = alpha ? " + ALPHA" : "";
+  const depthButtons = (["eight", "sixteen"] as Depth[]).map((d) =>
+    h("button", { type: "button", ariaPressed: String(d === opts.depth), onclick: () => {
+      opts.depth = d;
+      depthButtons.forEach((b, i) => b.ariaPressed = String(["eight", "sixteen"][i] === d));
+      refresh();
+    } }, `${d === "eight" ? "8-BIT" : "16-BIT"}${suffix}`));
 
-  const disk = h("div", { class: "disk", hidden: true });
-  const start = h("button", { class: "primary", disabled: true }, "Start");
+  const disk = h("p", { class: "disk", hidden: true });
+  const start = h("button", { class: "primary", hidden: true, onclick: async () => {
+    start.hidden = true;
+    await call("start", { opts });
+  } }, "Start");
+
+  // Start is absent, not disabled, until the choices can actually run (design system §6).
   let seq = 0;
   async function refresh() {
     const mine = ++seq;
-    start.disabled = true;
+    start.hidden = true;
     if (!opts.frames_parent || (opts.keep_video && !opts.video_dir)) { disk.hidden = true; return; }
     const c = await call<DiskCheck>("check_disk", { opts });
     if (mine !== seq || !c) return;
     disk.hidden = false;
     disk.className = `disk ${c.verdict}`;
-    const need = `Needs about ${bytes(c.frames_low + c.video)}–${bytes(c.frames_high + c.video)}`;
+    const need = `Needs ${bytes(c.frames_low + c.video)}–${bytes(c.frames_high + c.video)}`;
     const free = c.volumes.map((v) => bytes(v.free)).join(" / ");
     disk.textContent =
-      c.verdict === "block" ? `${need}, only ${free} free. Choose another folder.`
-      : c.verdict === "warn" ? `${need}, ${free} free. It may run out of space.`
-      : `${need}, ${free} free.`;
-    start.disabled = c.verdict === "block";
+      c.verdict === "block" ? `${need} · only ${free} free — choose another folder`
+      : c.verdict === "warn" ? `${need} · ${free} free — may run out of space`
+      : `${need} · ${free} free`;
+    start.hidden = c.verdict === "block";
   }
-
-  start.onclick = async () => {
-    start.disabled = true;
-    await call("start", { opts });
-  };
 
   return [
     h("h1", {}, m.title),
     h("div", { class: "card" }, facts),
     h("div", { class: "card" },
       h("div", { class: "field" },
-        h("label", {}, "Save the frames in"),
+        label("Frames folder"),
         h("div", { class: "picker" }, framesPath,
-          h("button", { onclick: async () => {
-            const d = await call<string | null>("pick_folder", { title: "Where should the frames go?" });
-            if (d) {
-              opts.frames_parent = d;
-              setPath(framesPath, d, "");
-              if (opts.keep_video && !opts.video_dir) { opts.video_dir = d; setPath(videoPath, d, ""); }
-              refresh();
-            }
-          } }, "Choose…")),
-        h("p", { class: "small muted" }, "A new folder named after the file is created inside it.")),
-      h("label", { class: "check" }, keep, "Keep the downloaded video"),
+          choose("Where should the frames go?", (d) => {
+            opts.frames_parent = d;
+            setPath(framesPath, d);
+            if (opts.keep_video && !opts.video_dir) { opts.video_dir = d; setPath(videoPath, d); }
+          }))),
+      h("label", { class: "row", htmlFor: "keep" }, h("span", { class: "small dim" }, "Keep the downloaded video"), keep),
       videoField,
-      h("div", { class: "field" }, h("label", {}, "PNG bit depth"), depth),
+      h("div", { class: "row" }, label("PNG bit depth"), h("div", { class: "seg" }, ...depthButtons)),
       disk),
     h("div", { class: "actions" },
-      h("button", { onclick: () => call("dismiss") }, "Cancel"),
+      h("button", { class: "secondary", onclick: () => call("dismiss") }, "Cancel"),
       start),
   ];
 }
@@ -258,23 +271,23 @@ const STAGES: [Stage, string][] = [
 ];
 let meter: HTMLDivElement | null = null;
 let stats: HTMLDivElement | null = null;
-let rate = { stage: "" as string, t0: 0, d0: 0 };
+let rate = { t0: 0, d0: 0 };
 
 function buildRunning(title: string, stage: Stage): Node[] {
   const idx = STAGES.findIndex(([s]) => s === stage);
   meter = h("div");
-  stats = h("div", { class: "stats" }, h("span", {}, "Starting…"), h("span", {}));
-  rate = { stage, t0: performance.now(), d0: 0 };
-  const busy = stage === "probe" || stage === "cleanup";
+  const quick = stage === "probe" || stage === "cleanup";
+  stats = h("div", { class: "stats" }, h("span", {}, quick ? "Working…" : "Starting…"), h("span", {}));
+  rate = { t0: performance.now(), d0: 0 };
   return [
     h("h1", {}, title),
     h("div", { class: "card" },
-      h("div", { class: "steps" }, ...STAGES.map(([, label], i) =>
-        h("span", { class: i < idx ? "done" : i === idx ? "on" : "" }, `${i ? "› " : ""}${label}`))),
-      h("div", { class: busy ? "meter busy" : "meter" }, meter),
+      h("div", { class: "steps" }, ...STAGES.map(([, name], i) =>
+        h("span", { class: i < idx ? "done" : i === idx ? "on" : "" }, `${i ? "› " : ""}${name}`))),
+      !quick && h("div", { class: "meter" }, meter),
       stats),
     h("div", { class: "actions" },
-      h("button", { class: "danger", onclick: () => call("cancel") }, "Cancel")),
+      h("button", { class: "secondary danger", onclick: () => call("cancel") }, "Cancel")),
   ];
 }
 
@@ -286,24 +299,23 @@ function onProgress(p: Progress) {
   const speed = secs > 0.5 ? (p.done - rate.d0) / secs : 0;
   const eta = speed > 0 ? (p.total - p.done) / speed : NaN;
   const [left, right] = stats.children as unknown as HTMLElement[];
-  if (p.stage === "download") {
-    left.textContent = `${bytes(p.done)} of ${bytes(p.total)}${speed ? ` · ${bytes(speed)}/s` : ""}`;
-  } else {
-    left.textContent = `Frame ${p.done.toLocaleString()} of ${p.total.toLocaleString()}${speed ? ` · ${speed.toFixed(1)} fps` : ""}`;
-  }
+  left.textContent = p.stage === "download"
+    ? `${bytes(p.done)} / ${bytes(p.total)}${speed ? ` · ${bytes(speed)}/s` : ""}`
+    : `${p.done.toLocaleString()} / ${p.total.toLocaleString()} frames${speed ? ` · ${speed.toFixed(1)} fps` : ""}`;
   right.textContent = isNaN(eta) ? "" : `${duration(eta)} left`;
 }
 
 // ---------------------------------------------------------------- wiring
 
-let lastHeight = 0;
-new ResizeObserver(() => {
-  const height = Math.ceil(app.getBoundingClientRect().height);
-  if (height !== lastHeight) {
-    lastHeight = height;
-    invoke("fit_window", { height }).catch(() => {});
-  }
-}).observe(app);
+// The window follows the content: report the gap between what the content needs and what
+// the webview shows, and Rust grows or shrinks the window by exactly that.
+function fit() {
+  const need = Math.ceil(app.getBoundingClientRect().height);
+  const gap = need - window.innerHeight;
+  if (gap !== 0) invoke("fit_window", { delta: gap }).catch(() => {});
+}
+new ResizeObserver(fit).observe(app);
+window.addEventListener("resize", fit);
 
 listen<View>("view", (e) => render(e.payload));
 listen<Progress>("progress", (e) => onProgress(e.payload));
