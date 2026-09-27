@@ -4,7 +4,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::manifest::Params;
+use crate::ops::video_to_png::Params;
 
 /// PNG size as a fraction of the raw RGB(A) frame. Film/VFX plates at compression 3 land
 /// roughly here; the low bound blocks, the high bound warns.

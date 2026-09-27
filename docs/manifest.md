@@ -1,6 +1,6 @@
-# AA Ext — link and manifest contract (v1)
+# Ranomaly Ext — link and manifest contract (v1)
 
-AA Ext is a desktop helper that AAB (the browser app) starts to do work that a browser
+Ranomaly Ext is a desktop helper that AAB (the browser app) starts to do work that a browser
 cannot do locally. AAB writes a small JSON **manifest** to R2, then opens a
 `ranomalyext://` link that points at it. The helper downloads the manifest, shows the
 user what it is about to do, asks for anything it needs (output folders, options), runs
@@ -23,6 +23,10 @@ AAB must percent-encode the full presigned URL (`encodeURIComponent`). Pasting i
 unencoded after the scheme breaks URL parsing.
 
 ## 2. The manifest
+
+**Envelope and op fields.** The envelope is `version`, `op`, `job_id` and `title`, and it is the
+same for every op. Every other field belongs to the op named in `op`. Section 4 onward has one
+section per op. A helper that doesn't know the `op` says it needs updating.
 
 `Content-Type: application/json`, at most 64 KB. Unknown fields are ignored so AAB can
 add fields without breaking older helpers; `version` is bumped only for breaking changes.
@@ -52,10 +56,10 @@ add fields without breaking older helpers; `version` is bumped only for breaking
 
 | Field | Required | Notes |
 |---|---|---|
-| `version` | yes | Must be `1`. |
-| `op` | yes | Which tool runs. v1 knows only `video_to_png`. Anything else is rejected with "update the helper". |
-| `job_id` | no | Shown to the user and in logs; helps support match a run to AAB. |
-| `title` | no | Human label shown in the window. Falls back to `input.filename`. |
+| `version` | yes | Envelope. Must be `1`. |
+| `op` | yes | Envelope. Which tool runs. Unknown ops are rejected with "update the helper". |
+| `job_id` | no | Envelope. Shown to the user; helps support match a run to AAB. |
+| `title` | no | Envelope. Human label shown in the window. Each op has a fallback (`video_to_png`: `input.filename`). |
 | `input.url` | yes | Full presigned URL of the source. Must pass the allowlist. |
 | `input.filename` | yes | Plain file name, no directories. Used for the downloaded file and the frames folder name. |
 | `input.size` | yes | Exact byte size; checked after download and used for the disk-space check. |
@@ -76,18 +80,26 @@ link live long enough for a large download plus the time the user spends choosin
 
 ## 3. Allowlist
 
-Both the manifest URL and `input.url` must be:
+The helper fetches only from origins compiled into it (`src-tauri/src/config.rs`), in two
+lists:
 
-- `https://`, default port, no user-info
-- host `<account>.r2.cloudflarestorage.com` (path style, bucket is the first path segment)
-  or `<bucket>.<account>.r2.cloudflarestorage.com` (virtual-host style)
-- bucket in the helper's allowed list
+- **`MANIFEST_ORIGINS`**: where a link may point.
+- **`MEDIA_ORIGINS`**: where a manifest may send the helper for inputs.
 
-The account id and bucket names are compiled into the helper
-(`src-tauri/src/config.rs`). HTTP redirects are not followed. Debug builds additionally
-accept `http://127.0.0.1:<port>/<allowed bucket>/…` for the local mock server.
+An entry is a host plus a path prefix. A URL matches when **all** of these hold:
 
-## 4. `video_to_png`
+- it is `https://`
+- its host is exactly the entry's host (subdomains don't count)
+- it has no port and no user-info
+- its path starts with the entry's prefix
+
+HTTP redirects are not followed. Debug builds also accept `http://127.0.0.1:<port>` under any
+listed prefix, for the local mock server.
+
+## 4. Op `video_to_png`
+
+Fields: `input.*` and `params.*` above.
+
 
 1. Show title, file name, size, resolution, frame count and link expiry.
 2. The user chooses:

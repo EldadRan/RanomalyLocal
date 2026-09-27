@@ -5,13 +5,15 @@ mod ffmpeg;
 mod job;
 mod link;
 mod manifest;
+mod ops;
 
 use tauri::{AppHandle, Manager, WindowEvent};
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 
-use job::{AppState, StartOptions, View};
+use job::{AppState, View};
+use serde_json::Value;
 
 #[tauri::command]
 fn get_view(app: AppHandle) -> View {
@@ -28,13 +30,14 @@ async fn pick_folder(app: AppHandle, title: String) -> Option<String> {
         .map(|p| p.display().to_string())
 }
 
+/// The op's live check of the user's choices (e.g. disk space). Shape is the op's own.
 #[tauri::command]
-fn check_disk(app: AppHandle, opts: StartOptions) -> Result<disk::DiskCheck, String> {
-    job::check_disk(&app, &opts)
+fn preflight(app: AppHandle, opts: Value) -> Result<Value, String> {
+    job::preflight(&app, &opts)
 }
 
 #[tauri::command]
-fn start(app: AppHandle, opts: StartOptions) -> Result<(), String> {
+fn start(app: AppHandle, opts: Value) -> Result<(), String> {
     job::start(&app, opts)
 }
 
@@ -53,13 +56,11 @@ fn dismiss(app: AppHandle) {
     job::dismiss(&app);
 }
 
-/// Opens only the folder of the finished job, never an arbitrary path from the webview.
+/// Opens only the finished job's output, never an arbitrary path from the webview.
 #[tauri::command]
 fn open_output(app: AppHandle) -> Result<(), String> {
-    let View::Done { frames_dir, .. } = app.state::<AppState>().view() else {
-        return Err("no finished job".into());
-    };
-    app.opener().open_path(frames_dir, None::<&str>).map_err(|e| e.to_string())
+    let path = job::output_path(&app).ok_or("no finished job")?;
+    app.opener().open_path(path.display().to_string(), None::<&str>).map_err(|e| e.to_string())
 }
 
 /// The window follows its content: the webview reports how many CSS pixels it is short
@@ -118,7 +119,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_view,
             pick_folder,
-            check_disk,
+            preflight,
             start,
             cancel,
             resolve_partial,

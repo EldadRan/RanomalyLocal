@@ -39,7 +39,7 @@ pub fn sidecar(name: &str) -> PathBuf {
     ))
 }
 
-fn command(name: &str) -> Command {
+pub(crate) fn command(name: &str) -> Command {
     let mut cmd = Command::new(sidecar(name));
     cmd.stdin(Stdio::null()).kill_on_drop(true);
     #[cfg(windows)]
@@ -51,7 +51,7 @@ fn command(name: &str) -> Command {
 }
 
 /// `file:` stops ffmpeg from reading `C:` or `name:with:colons` as a protocol.
-fn file_arg(path: &Path) -> String {
+pub(crate) fn file_arg(path: &Path) -> String {
     format!("file:{}", path.display())
 }
 

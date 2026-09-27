@@ -1,29 +1,34 @@
-# AA Ext
+# Ranomaly Ext
 
 Desktop helper for AAB. AAB writes a job manifest to R2 and opens
-`ranomalyext://run?manifest=<presigned URL>`; AA Ext fetches the manifest, asks the user
+`ranomalyext://run?manifest=<presigned URL>`; Ranomaly Ext fetches the manifest, asks the user
 for what it needs, runs the job locally and shows progress. First tool: `video_to_png`
 (download a video, decode it to a PNG sequence).
 
 - Contract AAB must follow: [docs/manifest.md](docs/manifest.md)
 - ffmpeg sidecars (LGPL, how to rebuild): [docs/ffmpeg.md](docs/ffmpeg.md)
-- Trust settings (R2 account + buckets): `src-tauri/src/config.rs`
+- Allowlist: `src-tauri/src/config.rs`
+- Adding a tool: [docs/adding-an-op.md](docs/adding-an-op.md)
 
 ## Layout
 
+**A shell plus ops.** The shell does everything every job needs; each op is one module per side.
+Adding one: [docs/adding-an-op.md](docs/adding-an-op.md).
+
 | Path | What |
 |---|---|
-| `src-tauri/src/link.rs` | strict `ranomalyext://` parsing, R2 allowlist, presigned expiry |
-| `src-tauri/src/manifest.rs` | manifest schema + validation; `op` → tool |
-| `src-tauri/src/download.rs` | streaming download, Range resume on drops, size + sha256 check |
-| `src-tauri/src/ffmpeg.rs` | ffprobe, explicit YUV→RGB colour plan, ffmpeg progress + cancel |
-| `src-tauri/src/disk.rs` | free-space estimate (blocks / warns) |
-| `src-tauri/src/job.rs` | state machine the window mirrors; the `video_to_png` job |
-| `src/` | the window (vanilla TS, no remote content, strict CSP) |
-| `tools/mock_r2.py` | local stand-in for AAB + R2 for end-to-end tests |
-
-Adding a tool: add an `Op` variant in `manifest.rs`, a job function in `job.rs`, and a
-view for its options in `src/main.ts`.
+| `src-tauri/src/config.rs` | **The allowlist**: manifest and media origins (host + path prefix) |
+| `src-tauri/src/link.rs` | strict `ranomalyext://` parsing, allowlist matching |
+| `src-tauri/src/manifest.rs` | the envelope (`version`, `op`, `job_id`, `title`), fetch, validators for ops |
+| `src-tauri/src/job.rs` | the shell: state the window mirrors, start / cancel / keep-or-delete / quit |
+| `src-tauri/src/ops/mod.rs` | the op registry and contract (`Job`, `Ctx`, `Events`, `Outcome`) |
+| `src-tauri/src/ops/video_to_png.rs` | the first op |
+| `src-tauri/src/{download,ffmpeg,disk}.rs` | building blocks ops share |
+| `src/main.ts` | the shell's screens: waiting, loading, running, done, partial, error |
+| `src/ops/` | one setup screen per op, registered in `index.ts` |
+| `src/ui.ts` | shared UI pieces (folder picker, chips, toggle, facts, toast) |
+| `tools/mock_r2.py` | local stand-in for AAB + storage for end-to-end runs |
+| `tools/preview.html` | every screen in a browser with IPC mocked, for layout checks |
 
 ## Develop (macOS)
 
@@ -32,7 +37,7 @@ npm install
 scripts/build-ffmpeg-macos.sh arm64        # once; puts sidecars in src-tauri/binaries/
 (cd src-tauri && cargo test)               # unit + downloader + real-sidecar decode/colour tests
 npx tauri build --debug --bundles app      # deep links only work from a bundle on macOS
-lsregister -f "src-tauri/target/debug/bundle/macos/AA Ext.app"   # (full path under LaunchServices.framework)
+lsregister -f "src-tauri/target/debug/bundle/macos/Ranomaly Ext.app"   # (full path under LaunchServices.framework)
 python3 tools/mock_r2.py --video some.mov --open   # serves manifest + video, opens the link
 ```
 
@@ -40,4 +45,4 @@ If `clang` complains about the Xcode licence, either run `sudo xcodebuild -licen
 prefix commands with `DEVELOPER_DIR=/Library/Developer/CommandLineTools`.
 
 Debug builds also accept `http://127.0.0.1:<port>/<allowed bucket>/…` so the mock works;
-release builds accept only the R2 host in `config.rs`.
+release builds accept only the origins in `config.rs`.

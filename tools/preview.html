@@ -9,19 +9,22 @@
     <title>Ranomaly Ext — preview</title>
     <script>
       const state = new URLSearchParams(location.search).get("state") || "ready";
-      const manifest = {
-        op: "video_to_png", job_id: "mock_1790504119", title: "Mock job — shot 012 plate ü.mov",
-        input: { filename: "shot 012 plate ü.mov", size: 131559347, sha256: null },
-        params: { frames: 120, width: 3840, height: 2160, fps: 24, pix_fmt: "yuv422p10le" },
-        input_expires_at: Date.now() / 1000 + 6 * 3600,
-      };
+      const title = "Mock job — shot 012 plate ü.mov";
+      const dir = "/Volumes/Base_Storage/Downloads/rife_stress/shot 012 plate ü";
       const views = {
         idle: { state: "idle" },
         failed: { state: "failed", message: "the download link has expired — start again from AAB" },
-        ready: { state: "ready", manifest, source_high_bit: true, source_alpha: false },
-        running: { state: "running", title: manifest.title, stage: "decode" },
-        partial: { state: "partial", title: manifest.title, message: "Cancelled.", written: 37, frames_dir: "/Volumes/Base_Storage/Downloads/rife_stress/shot 012 plate ü" },
-        done: { state: "done", title: manifest.title, frames_dir: "/Volumes/Base_Storage/Downloads/rife_stress/shot 012 plate ü", frames: 120, expected: 120, video: "/Volumes/Base_Storage/Downloads/rife_stress/shot 012 plate ü.mov", warning: null },
+        ready: { state: "ready", op: "video_to_png", title, job_id: "mock_1790504119", details: {
+          filename: "shot 012 plate ü.mov", size: 131559347, expires_at: Date.now() / 1000 + 6 * 3600,
+          frames: 120, width: 3840, height: 2160, fps: 24, pix_fmt: "yuv422p10le",
+          source_high_bit: true, source_alpha: false } },
+        unknown_op: { state: "ready", op: "future_op", title, job_id: null, details: {} },
+        running: { state: "running", title, stages: ["Download", "Check", "Decode", "Finish"], stage: 2 },
+        partial: { state: "partial", title, message: "Cancelled.", facts: [
+          { label: "Written", value: "37 frames", mono: true }, { label: "Folder", value: dir, mono: false }] },
+        done: { state: "done", title, warning: null, can_open: true, facts: [
+          { label: "Frames", value: "120", mono: true }, { label: "Folder", value: dir, mono: false },
+          { label: "Video", value: dir + ".mov", mono: false }] },
       };
       const handlers = {};
       let cbId = 0;
@@ -32,7 +35,7 @@
           switch (cmd) {
             case "get_view": return views[state];
             case "pick_folder": return "/Volumes/Base_Storage/Downloads/rife_stress";
-            case "check_disk": return { verdict: "ok", frames_low: 1.2e9, frames_high: 2.9e9, video: 131559347,
+            case "preflight": return { verdict: "ok", frames_low: 1.2e9, frames_high: 2.9e9, video: 131559347,
               volumes: [{ path: "/", free: 933e9, need_low: 1.3e9, need_high: 3e9 }] };
             case "plugin:event|listen": handlers[args.event] = args.handler; return args.handler;
             default: return null;
@@ -47,7 +50,8 @@
         document.documentElement.dataset.layout = JSON.stringify({ vw: innerWidth, vh: innerHeight,
           app: Math.ceil(app.getBoundingClientRect().height), scrollW: document.documentElement.scrollWidth, wide });
       }, 1500);
-      window.__previewProgress = (done, total) => window["_" + handlers.progress]?.({ payload: { stage: "decode", done, total } });
+      // The running preview shows mid-decode progress.
+      if (state === "running") setTimeout(() => window["_" + handlers.progress]?.({ payload: { stage: 2, done: 48, total: 120, unit: "frames" } }), 800);
     </script>
     <script type="module" src="/src/main.ts"></script>
   </head>

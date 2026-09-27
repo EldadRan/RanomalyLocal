@@ -39,46 +39,34 @@ pub fn parse_link(raw: &str) -> Result<Url, LinkError> {
         _ => return Err(LinkError::Malformed),
     };
     let url = Url::parse(&manifest).map_err(|_| LinkError::Malformed)?;
-    check_allowed(&url)?;
+    check_allowed(&url, config::MANIFEST_ORIGINS)?;
     Ok(url)
 }
 
-/// Accepts only presigned R2 URLs for our account and buckets.
-pub fn check_allowed(url: &Url) -> Result<(), LinkError> {
+/// Accepts a URL only if it matches one of `origins` (see `config`).
+pub fn check_allowed(url: &Url, origins: &[config::Origin]) -> Result<(), LinkError> {
     if !url.username().is_empty() || url.password().is_some() || url.fragment().is_some() {
         return Err(LinkError::NotAllowed);
     }
-    if cfg!(debug_assertions) && dev_mock_allowed(url) {
+    let path = url.path();
+    let prefix_ok = |o: &config::Origin| path.starts_with(o.path_prefix);
+    // Debug builds only: the local mock server, on any port, under an allowlisted path.
+    if cfg!(debug_assertions)
+        && url.scheme() == "http"
+        && url.host_str() == Some("127.0.0.1")
+        && origins.iter().any(prefix_ok)
+    {
         return Ok(());
     }
     if url.scheme() != "https" || url.port().is_some() {
         return Err(LinkError::NotAllowed);
     }
     let host = url.host_str().ok_or(LinkError::NotAllowed)?.to_ascii_lowercase();
-    let account_host = config::r2_host();
-    let bucket = if host == account_host {
-        first_segment(url)
-    } else if let Some(bucket) = host.strip_suffix(&format!(".{account_host}")) {
-        Some(bucket.to_string())
+    if origins.iter().any(|o| o.host.eq_ignore_ascii_case(&host) && prefix_ok(o)) {
+        Ok(())
     } else {
-        None
-    };
-    match bucket {
-        Some(b) if config::R2_BUCKETS.contains(&b.as_str()) => Ok(()),
-        _ => Err(LinkError::NotAllowed),
+        Err(LinkError::NotAllowed)
     }
-}
-
-fn first_segment(url: &Url) -> Option<String> {
-    let seg = url.path_segments()?.next()?;
-    (!seg.is_empty()).then(|| seg.to_string())
-}
-
-/// Debug builds only: `http://127.0.0.1:<port>/<allowed bucket>/…` for the local mock server.
-fn dev_mock_allowed(url: &Url) -> bool {
-    url.scheme() == "http"
-        && url.host_str() == Some("127.0.0.1")
-        && first_segment(url).is_some_and(|b| config::R2_BUCKETS.contains(&b.as_str()))
 }
 
 /// Unix time at which a SigV4-presigned URL stops working, if it says so.
@@ -118,52 +106,56 @@ fn parse_amz_date(s: &str) -> Option<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn r2(path: &str) -> String {
-        format!("https://{}{}", config::r2_host(), path)
-    }
+    use config::{MANIFEST_ORIGINS as M, MEDIA_ORIGINS as MEDIA};
 
     fn link_for(target: &str) -> String {
         let enc: String = url::form_urlencoded::byte_serialize(target.as_bytes()).collect();
         format!("ranomalyext://run?manifest={enc}")
     }
 
-    #[test]
-    fn accepts_path_style() {
-        let target = r2("/aab-temp/m/abc.json?X-Amz-Date=20260927T101500Z&X-Amz-Expires=600");
-        let url = parse_link(&link_for(&target)).unwrap();
-        assert_eq!(url.as_str(), target);
+    fn allowed(u: &str, origins: &[config::Origin]) -> bool {
+        check_allowed(&Url::parse(u).unwrap(), origins).is_ok()
     }
 
     #[test]
-    fn accepts_virtual_host_style() {
-        let target = format!("https://aab-media.{}/v/a.mov", config::r2_host());
-        assert!(check_allowed(&Url::parse(&target).unwrap()).is_ok());
+    fn accepts_listed_origins() {
+        let target = "https://acct.r2.cloudflarestorage.com/aab-temp/m/abc.json?X-Amz-Expires=600";
+        assert_eq!(parse_link(&link_for(target)).unwrap().as_str(), target);
+        assert!(allowed("https://API.example.test/ext/manifests/0f3a", M));
+        assert!(allowed("https://delivery.example.test/anything?sig=1", MEDIA));
     }
 
     #[test]
-    fn rejects_other_buckets_hosts_and_schemes() {
+    fn rejects_everything_else() {
         for bad in [
-            r2("/other-bucket/x.json"),
-            r2("/"),
-            format!("http://{}/aab-temp/x.json", config::r2_host()),
-            format!("https://{}:8443/aab-temp/x.json", config::r2_host()),
-            "https://evil.example/aab-temp/x.json".into(),
-            format!("https://{}.evil.example/aab-temp/x.json", config::r2_host()),
-            format!("https://evil.aab-temp.{}/x", "example.com"),
-            format!("https://u:p@{}/aab-temp/x.json", config::r2_host()),
+            "https://acct.r2.cloudflarestorage.com/other-bucket/x.json",
+            "https://acct.r2.cloudflarestorage.com/aab-temp-2/x.json",
+            "https://acct.r2.cloudflarestorage.com/",
+            "http://acct.r2.cloudflarestorage.com/aab-temp/x.json",
+            "https://acct.r2.cloudflarestorage.com:8443/aab-temp/x.json",
+            "https://evil.example/aab-temp/x.json",
+            "https://x.acct.r2.cloudflarestorage.com/aab-temp/x.json",
+            "https://acct.r2.cloudflarestorage.com.evil.example/aab-temp/x.json",
+            "https://u:p@acct.r2.cloudflarestorage.com/aab-temp/x.json",
+            "https://acct.r2.cloudflarestorage.com/aab-temp/../other/x.json",
+            // A media origin is not a manifest origin, and the reverse.
+            "https://delivery.example.test/x.json",
         ] {
-            assert_eq!(
-                check_allowed(&Url::parse(&bad).unwrap()),
-                Err(LinkError::NotAllowed),
-                "{bad}"
-            );
+            assert!(!allowed(bad, M), "{bad}");
         }
+        assert!(!allowed("https://api.example.test/ext/manifests/x", MEDIA));
+    }
+
+    #[test]
+    fn debug_builds_accept_the_local_mock_under_listed_paths() {
+        assert!(allowed("http://127.0.0.1:8765/aab-temp/m.json", M));
+        assert!(!allowed("http://127.0.0.1:8765/elsewhere/m.json", M));
+        assert!(!allowed("http://localhost:8765/aab-temp/m.json", M));
     }
 
     #[test]
     fn rejects_malformed_links() {
-        let good = r2("/aab-temp/x.json");
+        let good = "https://acct.r2.cloudflarestorage.com/aab-temp/x.json";
         let enc: String = url::form_urlencoded::byte_serialize(good.as_bytes()).collect();
         for bad in [
             format!("ranomalyext://other?manifest={enc}"),
@@ -181,9 +173,9 @@ mod tests {
 
     #[test]
     fn reads_presigned_expiry() {
-        let url = Url::parse(&r2("/aab-temp/x?X-Amz-Date=19700101T000100Z&X-Amz-Expires=600")).unwrap();
+        let url = Url::parse("https://h/b/x?X-Amz-Date=19700101T000100Z&X-Amz-Expires=600").unwrap();
         assert_eq!(presigned_expiry(&url), Some(660));
-        let url = Url::parse(&r2("/aab-temp/x?X-Amz-Date=20260927T101500Z&X-Amz-Expires=0")).unwrap();
+        let url = Url::parse("https://h/b/x?X-Amz-Date=20260927T101500Z&X-Amz-Expires=0").unwrap();
         assert_eq!(presigned_expiry(&url), Some(1_790_504_100));
     }
 }
