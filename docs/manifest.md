@@ -37,7 +37,8 @@ add fields without breaking older helpers; `version` is bumped only for breaking
     "url": "https://<account>.r2.cloudflarestorage.com/<bucket>/<key>?X-Amz-…",
     "filename": "shot012_plate_v3.mov",
     "size": 51234567890,
-    "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+    "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+    "expires_at": 1790525700
   },
   "params": {
     "frames": 2880,
@@ -59,6 +60,7 @@ add fields without breaking older helpers; `version` is bumped only for breaking
 | `input.filename` | yes | Plain file name, no directories. Used for the downloaded file and the frames folder name. |
 | `input.size` | yes | Exact byte size; checked after download and used for the disk-space check. |
 | `input.sha256` | no | Lower-case hex. When present the download is verified against it. |
+| `input.expires_at` | no | Unix seconds when `input.url` stops working. Shown to the user. Send it: the URL format is CF's and is not parsed reliably. |
 | `params.frames` | yes | Expected frame count; used for the disk estimate before download and for progress if the container does not report it. |
 | `params.width`, `params.height` | yes | Used for the disk estimate before download. |
 | `params.fps` | no | Informational. |

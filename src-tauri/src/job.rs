@@ -265,13 +265,15 @@ pub async fn resolve_partial(app: &AppHandle, keep: bool) -> Result<(), String> 
         .await
         .map_err(|e| e.to_string())?
         .map_err(|e| format!("could not delete the frames: {e}"))?;
-    set_view(app, View::Idle);
+    app.exit(0);
     Ok(())
 }
 
+/// The app exists for one job: once the user closes the outcome (Done, Close, Cancel before
+/// starting, or deleting partial frames) it quits. AAB starts it again with the next link.
 pub fn dismiss(app: &AppHandle) {
     if !app.state::<AppState>().is_busy() {
-        set_view(app, View::Idle);
+        app.exit(0);
     }
 }
 

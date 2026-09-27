@@ -25,6 +25,9 @@ struct RawInput {
     size: u64,
     #[serde(default)]
     sha256: Option<String>,
+    /// Unix seconds when `url` stops working. AAB knows it because it chose the lifetime.
+    #[serde(default)]
+    expires_at: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -117,7 +120,8 @@ pub fn parse(bytes: &[u8]) -> Result<Manifest, ManifestError> {
         op,
         job_id,
         title,
-        input_expires_at: link::presigned_expiry(&url),
+        // CF promises no URL format, so the manifest's own figure wins; parsing is a fallback.
+        input_expires_at: raw.input.expires_at.or_else(|| link::presigned_expiry(&url)),
         input: Input { url, filename, size: raw.input.size, sha256 },
         params: raw.params,
     })
