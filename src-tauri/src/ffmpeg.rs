@@ -447,7 +447,9 @@ mod sidecar_tests {
             .args(["-v", "error", "-f", "lavfi", "-i"])
             .arg(format!("color=c=0x{rgb}:s={size}:r=24:d={seconds}"))
             .args([
-                "-vf", "format=rgb24,scale=out_color_matrix=bt709:out_range=tv,format=yuv422p10le",
+                // accurate_rnd: without it x86 builds take a faster, less exact RGB→YUV path, and
+                // the fixture itself would carry the colour error the test is looking for.
+                "-vf", "format=rgb24,scale=out_color_matrix=bt709:out_range=tv:flags=accurate_rnd+full_chroma_int,format=yuv422p10le",
                 "-c:v", "prores_ks", "-profile:v", "3",
                 "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
                 "-color_range", "tv",
@@ -521,7 +523,7 @@ mod sidecar_tests {
     #[tokio::test]
     async fn cancel_stops_ffmpeg_promptly() {
         let dir = tempfile::tempdir().unwrap();
-        let clip = make_clip(dir.path(), "808080", 20, "1920x1080").await;
+        let clip = make_clip(dir.path(), "808080", 8, "1920x1080").await;
         let p = probe(&clip).await.unwrap();
         let out = dir.path().join("f");
         std::fs::create_dir(&out).unwrap();
@@ -536,7 +538,7 @@ mod sidecar_tests {
         .await;
         assert!(matches!(r, Err(FfmpegError::Cancelled)), "{r:?}");
         let written = std::fs::read_dir(&out).unwrap().count();
-        assert!(written > 0 && written < 480, "{written}");
+        assert!(written > 0 && written < 192, "{written}");
         // No stray ffmpeg writing more frames after cancel returned.
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         assert_eq!(std::fs::read_dir(&out).unwrap().count(), written);
