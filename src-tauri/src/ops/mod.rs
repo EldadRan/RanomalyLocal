@@ -6,7 +6,7 @@
 //!    `preflight`, `start_check` and `run` (copy the shape of `video_to_png`).
 //! 2. Add a variant to [`Job`] and one line to each `match` below — the compiler lists them.
 //! 3. Add `src/ops/<name>.ts` for its setup screen and register it in `src/ops/index.ts`.
-//! 4. Document its manifest fields in docs/manifest.md.
+//! 4. Document its manifest fields in docs/api.md §4.
 //!
 //! Everything else — links and their checks, state, the running/done/partial/failed screens,
 //! progress, Cancel, sleep prevention, one-job-at-a-time, quitting — is shared.

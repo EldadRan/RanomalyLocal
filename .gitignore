@@ -26,3 +26,6 @@ dist-ssr
 # ffmpeg sidecars (built/fetched by scripts/, never committed)
 src-tauri/binaries/
 .ffmpeg-build/
+
+# Handoffs are temporary correspondence, never committed.
+handoffs/

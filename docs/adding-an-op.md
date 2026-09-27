@@ -38,7 +38,7 @@ app link ─► shell fetches manifest ─► ops::prepare(envelope, doc)  ─�
 | Registration | `src-tauri/src/ops/mod.rs` | One `Job` variant and one arm per `match`; the compiler lists every place |
 | Setup screen | `src/ops/<op>.ts` | An `OpUI.ready(ctx)` returning the screen: job facts, the user's choices, Cancel and Start |
 | Registration | `src/ops/index.ts` | One line mapping the op name to its UI |
-| Contract | `docs/manifest.md` | A section with the op's fields, for calling apps |
+| Contract | `docs/api.md` | A section in §4 with the op's fields and what the user sees |
 
 ## Rules an op must keep
 
@@ -75,7 +75,7 @@ app link ─► shell fetches manifest ─► ops::prepare(envelope, doc)  ─�
    `run` through a recording `Events` (see `video_to_png::e2e`).
 2. Add the variant and its match arms in `ops/mod.rs`.
 3. `src/ops/<op>.ts` plus one line in `src/ops/index.ts`.
-4. A `docs/manifest.md` section, and a handoff to each calling app for its side.
+4. A section in `docs/api.md` §4, and new messages added to its §5.
 5. Add a state for it to `tools/preview.html` and check the screen at 460 px.
 6. `cargo test`, `npm run build`, then a real run from a bundle with `tools/mock_r2.py`, or a
    mock of your own.

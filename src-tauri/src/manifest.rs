@@ -1,4 +1,4 @@
-//! The manifest envelope every op shares (see docs/manifest.md).
+//! The manifest envelope every op shares (see docs/api.md §2).
 //!
 //! Only `version`, `op`, `job_id` and `title` belong to the envelope. Everything else in the JSON
 //! is the op's own, and the op parses it from the same document (`ops::prepare`).

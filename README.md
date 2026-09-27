@@ -5,7 +5,7 @@ Desktop helper for Ranomaly apps (AA Base is the first). A calling app publishes
 for what it needs, runs the job locally and shows progress. First tool: `video_to_png`
 (download a video, decode it to a PNG sequence).
 
-- Contract a calling app must follow: [docs/manifest.md](docs/manifest.md)
+- **For calling apps: [docs/api.md](docs/api.md)**, the link, the manifest, every op, errors and testing
 - ffmpeg sidecars (LGPL, how to rebuild): [docs/ffmpeg.md](docs/ffmpeg.md)
 - Adding a tool: [docs/adding-an-op.md](docs/adding-an-op.md)
 
@@ -28,6 +28,22 @@ Adding one: [docs/adding-an-op.md](docs/adding-an-op.md).
 | `src/ui.ts` | shared UI pieces (folder picker, chips, toggle, facts, toast) |
 | `tools/mock_r2.py` | local stand-in for a calling app + storage for end-to-end runs |
 | `tools/preview.html` | every screen in a browser with IPC mocked, for layout checks |
+
+## CI and Windows builds
+
+`.github/workflows/build.yml` runs on every push to `main` (and on PRs), on `windows-latest` and
+`macos-latest`:
+
+1. Fetch or build the LGPL ffmpeg sidecars (cached).
+2. `npm run build` and `cargo test --locked`. This includes the real-sidecar decode and colour
+   tests, so the Windows ffmpeg is exercised too.
+3. Bundle and upload installers under the run's **Artifacts**, kept for 14 days:
+   - Windows `-release` is the NSIS installer.
+   - Windows `-debug` also accepts `http://127.0.0.1`, for testing with a local mock.
+   - macOS `-release` is the `.dmg`.
+
+All installers are unsigned for now. Development happens on a Mac, so every Windows build comes
+from CI.
 
 ## Develop (macOS)
 
