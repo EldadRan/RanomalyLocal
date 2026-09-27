@@ -1,6 +1,6 @@
-# Ranomaly Ext — link and manifest contract (v1)
+# Ranomaly Local — link and manifest contract (v1)
 
-Ranomaly Ext is a desktop helper that AAB (the browser app) starts to do work that a browser
+Ranomaly Local is a desktop helper that AAB (the browser app) starts to do work that a browser
 cannot do locally. AAB writes a small JSON **manifest** to R2, then opens a
 `ranomalyext://` link that points at it. The helper downloads the manifest, shows the
 user what it is about to do, asks for anything it needs (output folders, options), runs

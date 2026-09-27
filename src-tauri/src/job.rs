@@ -115,7 +115,7 @@ pub fn http_client() -> reqwest::Client {
         .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(Duration::from_secs(20))
         .read_timeout(Duration::from_secs(60))
-        .user_agent(concat!("Ranomaly-Ext/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("Ranomaly-Local/", env!("CARGO_PKG_VERSION")))
         .build()
         .expect("http client")
 }
@@ -202,7 +202,7 @@ pub fn start(app: &AppHandle, opts: Value) -> Result<(), String> {
         let _awake = keepawake::Builder::default()
             .idle(true)
             .reason("Running a Ranomaly job")
-            .app_name("Ranomaly Ext")
+            .app_name("Ranomaly Local")
             .app_reverse_domain("com.ranomaly.ext")
             .create()
             .ok();

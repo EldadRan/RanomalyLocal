@@ -80,5 +80,5 @@ AAB link ─► shell fetches manifest ─► ops::prepare(envelope, doc)  ─�
    mock of your own.
 
 An older helper that receives a manifest for an op it doesn't know shows *"this request needs a
-newer version of Ranomaly Ext"*. That's why ops can ship on AAB's side before every user has
+newer version of Ranomaly Local"*. That's why ops can ship on AAB's side before every user has
 updated.

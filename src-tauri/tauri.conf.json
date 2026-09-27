@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Ranomaly Ext",
+  "productName": "Ranomaly Local",
   "version": "0.1.0",
   "identifier": "com.ranomaly.ext",
   "build": {
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Ranomaly Ext",
+        "title": "Ranomaly Local",
         "width": 460,
         "height": 240,
         "minWidth": 420,

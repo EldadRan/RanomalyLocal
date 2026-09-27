@@ -1,7 +1,7 @@
-# Ranomaly Ext
+# Ranomaly Local
 
 Desktop helper for AAB. AAB writes a job manifest to R2 and opens
-`ranomalyext://run?manifest=<presigned URL>`; Ranomaly Ext fetches the manifest, asks the user
+`ranomalyext://run?manifest=<presigned URL>`; Ranomaly Local fetches the manifest, asks the user
 for what it needs, runs the job locally and shows progress. First tool: `video_to_png`
 (download a video, decode it to a PNG sequence).
 
@@ -37,7 +37,7 @@ npm install
 scripts/build-ffmpeg-macos.sh arm64        # once; puts sidecars in src-tauri/binaries/
 (cd src-tauri && cargo test)               # unit + downloader + real-sidecar decode/colour tests
 npx tauri build --debug --bundles app      # deep links only work from a bundle on macOS
-lsregister -f "src-tauri/target/debug/bundle/macos/Ranomaly Ext.app"   # (full path under LaunchServices.framework)
+lsregister -f "src-tauri/target/debug/bundle/macos/Ranomaly Local.app"   # (full path under LaunchServices.framework)
 python3 tools/mock_r2.py --video some.mov --open   # serves manifest + video, opens the link
 ```
 
