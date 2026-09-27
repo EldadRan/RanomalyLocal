@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "AA Ext",
+  "productName": "Ranomaly Ext",
   "version": "0.1.0",
   "identifier": "com.ranomany.aaext",
   "build": {
@@ -14,11 +14,11 @@
     "windows": [
       {
         "label": "main",
-        "title": "AA Ext",
+        "title": "Ranomaly Ext",
         "width": 460,
-        "height": 620,
+        "height": 680,
         "minWidth": 420,
-        "minHeight": 520,
+        "minHeight": 560,
         "resizable": true
       }
     ],

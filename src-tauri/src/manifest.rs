@@ -73,7 +73,7 @@ pub enum ManifestError {
     Fetch(String),
     #[error("the request is not valid: {0}")]
     Invalid(String),
-    #[error("this request needs a newer version of AA Ext ({0})")]
+    #[error("this request needs a newer version of Ranomaly Ext ({0})")]
     Unsupported(String),
 }
 

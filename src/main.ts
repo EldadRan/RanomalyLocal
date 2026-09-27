@@ -59,7 +59,7 @@ function bytes(n: number): string {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let i = 0;
   while (n >= 1000 && i < units.length - 1) { n /= 1000; i++; }
-  return `${n.toFixed(n >= 100 || i === 0 ? 0 : 1)} ${units[i]}`;
+  return `${n.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
 function duration(s: number): string {
@@ -146,7 +146,7 @@ function build(v: View): Node[] {
 // ---- ready: collect the user's choices
 
 function buildReady(m: Manifest, highBit: boolean, alpha: boolean): Node[] {
-  const opts: StartOptions = { frames_parent: "", keep_video: false, video_dir: null, depth: "match" };
+  const opts: StartOptions = { frames_parent: "", keep_video: false, video_dir: null, depth: "eight" };
   const p = m.params;
 
   const expiry = h("dd", {});
@@ -170,7 +170,7 @@ function buildReady(m: Manifest, highBit: boolean, alpha: boolean): Node[] {
   const framesPath = h("div", { class: "path empty", title: "" }, "No folder chosen");
   const videoPath = h("div", { class: "path empty" }, "Same as frames folder");
   const setPath = (el: HTMLElement, path: string | null, empty: string) => {
-    el.textContent = path ?? empty;
+    el.textContent = path ? `\u200E${path}\u200E` : empty;
     el.title = path ?? "";
     el.classList.toggle("empty", !path);
   };
@@ -193,11 +193,13 @@ function buildReady(m: Manifest, highBit: boolean, alpha: boolean): Node[] {
     refresh();
   };
 
-  const depthLabel = `Match source (${highBit ? "16-bit" : "8-bit"}${alpha ? " + alpha" : ""})`;
+  const alphaNote = alpha ? " + alpha" : "";
   const depth = h("select", {},
-    h("option", { value: "match" }, depthLabel),
-    h("option", { value: "eight" }, "8-bit"),
-    h("option", { value: "sixteen" }, "16-bit"));
+    h("option", { value: "eight" }, `8-bit${alphaNote}`),
+    h("option", { value: "sixteen" }, `16-bit${alphaNote}`));
+  const depthHint = highBit
+    ? h("p", { class: "small warning" }, `This video is ${p.pix_fmt ?? "high bit depth"}; choose 16-bit to keep its full precision.`)
+    : null;
   depth.onchange = () => { opts.depth = depth.value as Depth; refresh(); };
 
   const disk = h("div", { class: "disk", hidden: true });
@@ -244,7 +246,7 @@ function buildReady(m: Manifest, highBit: boolean, alpha: boolean): Node[] {
         h("p", { class: "small muted" }, "A new folder named after the file is created inside it.")),
       h("label", { class: "check" }, keep, "Keep the downloaded video"),
       videoField,
-      h("div", { class: "field" }, h("label", {}, "PNG bit depth"), depth),
+      h("div", { class: "field" }, h("label", {}, "PNG bit depth"), depth, depthHint),
       disk),
     h("div", { class: "actions" },
       h("button", { onclick: () => call("dismiss") }, "Cancel"),

@@ -11,7 +11,7 @@ use crate::config;
 pub enum LinkError {
     #[error("the link is too long")]
     TooLong,
-    #[error("the link is not a valid AA Ext link")]
+    #[error("the link is not a valid Ranomaly link")]
     Malformed,
     #[error("the link points outside AAB storage")]
     NotAllowed,

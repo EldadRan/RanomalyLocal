@@ -226,7 +226,7 @@ pub fn start(app: &AppHandle, opts: StartOptions) -> Result<(), String> {
         let _awake = keepawake::Builder::default()
             .idle(true)
             .reason("Decoding video frames")
-            .app_name("AA Ext")
+            .app_name("Ranomaly Ext")
             .app_reverse_domain("com.ranomany.aaext")
             .create()
             .ok();

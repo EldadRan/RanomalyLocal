@@ -99,7 +99,7 @@ pub fn run() {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 if job::is_running(window.app_handle()) {
                     api.prevent_close();
-                    job::notice(window.app_handle(), "Cancel the job before closing AA Ext.");
+                    job::notice(window.app_handle(), "Cancel the job before closing Ranomaly Ext.");
                 }
             }
         })
@@ -114,5 +114,5 @@ pub fn run() {
             open_output
         ])
         .run(tauri::generate_context!())
-        .expect("error while running AA Ext");
+        .expect("error while running Ranomaly Ext");
 }
