@@ -447,8 +447,7 @@ mod sidecar_tests {
             .args(["-v", "error", "-f", "lavfi", "-i"])
             .arg(format!("color=c=0x{rgb}:s={size}:r=24:d={seconds}"))
             .args([
-                // accurate_rnd: without it x86 builds take a faster, less exact RGB→YUV path, and
-                // the fixture itself would carry the colour error the test is looking for.
+                // Content only; colour accuracy is tested on a committed fixture (see below).
                 "-vf", "format=rgb24,scale=out_color_matrix=bt709:out_range=tv:flags=accurate_rnd+full_chroma_int,format=yuv422p10le",
                 "-c:v", "prores_ks", "-profile:v", "3",
                 "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
@@ -481,8 +480,16 @@ mod sidecar_tests {
 
     #[tokio::test]
     async fn ten_bit_clip_decodes_to_colour_accurate_16_bit_pngs() {
+        // A committed ProRes file, not one encoded here: ffmpeg's ProRes *encoder* rounds luma
+        // differently on x86 (Y 241 vs 247 for this colour), which would make the test measure
+        // the fixture instead of the decode. Every platform decodes these bytes identically.
         let dir = tempfile::tempdir().unwrap();
-        let clip = make_clip(dir.path(), "B4103C", 1, "320x240").await;
+        let clip = dir.path().join("clip 100% ü.mov");
+        std::fs::copy(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/solid-b4103c-prores-422p10-bt709.mov"),
+            &clip,
+        )
+        .unwrap();
         let p = probe(&clip).await.unwrap();
         assert_eq!((p.pix_fmt.as_str(), p.bit_depth, p.has_alpha), ("yuv422p10le", 10, false));
         assert_eq!(p.color_space.as_deref(), Some("bt709"));
