@@ -7,7 +7,6 @@ for what it needs, runs the job locally and shows progress. First tool: `video_t
 
 - Contract AAB must follow: [docs/manifest.md](docs/manifest.md)
 - ffmpeg sidecars (LGPL, how to rebuild): [docs/ffmpeg.md](docs/ffmpeg.md)
-- Allowlist: `src-tauri/src/config.rs`
 - Adding a tool: [docs/adding-an-op.md](docs/adding-an-op.md)
 
 ## Layout
@@ -17,8 +16,8 @@ Adding one: [docs/adding-an-op.md](docs/adding-an-op.md).
 
 | Path | What |
 |---|---|
-| `src-tauri/src/config.rs` | **The allowlist**: manifest and media origins (host + path prefix) |
-| `src-tauri/src/link.rs` | strict `ranomalyext://` parsing, allowlist matching |
+| `src-tauri/src/config.rs` | limits (link and manifest size); there is no host allowlist |
+| `src-tauri/src/link.rs` | strict `ranomalyext://` parsing; URLs must be https |
 | `src-tauri/src/manifest.rs` | the envelope (`version`, `op`, `job_id`, `title`), fetch, validators for ops |
 | `src-tauri/src/job.rs` | the shell: state the window mirrors, start / cancel / keep-or-delete / quit |
 | `src-tauri/src/ops/mod.rs` | the op registry and contract (`Job`, `Ctx`, `Events`, `Outcome`) |
@@ -44,5 +43,5 @@ python3 tools/mock_r2.py --video some.mov --open   # serves manifest + video, op
 If `clang` complains about the Xcode licence, either run `sudo xcodebuild -license` or
 prefix commands with `DEVELOPER_DIR=/Library/Developer/CommandLineTools`.
 
-Debug builds also accept `http://127.0.0.1:<port>/<allowed bucket>/…` so the mock works;
-release builds accept only the origins in `config.rs`.
+Debug builds also accept `http://127.0.0.1:<port>/…` so the mock works;
+release builds accept https only.

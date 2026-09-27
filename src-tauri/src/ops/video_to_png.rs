@@ -400,7 +400,7 @@ mod tests {
 
     #[test]
     fn rejects_bad_input() {
-        assert!(Job::from_manifest(manifest("https://evil.example/a.mov", "a.mov")).is_err());
+        assert!(Job::from_manifest(manifest("http://plain.example/a.mov", "a.mov")).is_err());
         assert!(Job::from_manifest(manifest(MEDIA, "../a.mov")).is_err());
         let mut m = manifest(MEDIA, "a.mov");
         m["params"]["frames"] = json!(0);

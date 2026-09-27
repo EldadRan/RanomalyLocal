@@ -17,7 +17,7 @@ The helper rejects the link unless **all** of these hold:
 - scheme is `ranomalyext`, host is `run`, path is empty or `/`
 - the query has exactly one parameter, `manifest`, and nothing else (no fragment)
 - the whole link is at most 8 KB
-- the decoded manifest URL passes the R2 allowlist (section 3)
+- the decoded manifest URL is https (section 3)
 
 AAB must percent-encode the full presigned URL (`encodeURIComponent`). Pasting it
 unencoded after the scheme breaks URL parsing.
@@ -60,7 +60,7 @@ add fields without breaking older helpers; `version` is bumped only for breaking
 | `op` | yes | Envelope. Which tool runs. Unknown ops are rejected with "update the helper". |
 | `job_id` | no | Envelope. Shown to the user; helps support match a run to AAB. |
 | `title` | no | Envelope. Human label shown in the window. Each op has a fallback (`video_to_png`: `input.filename`). |
-| `input.url` | yes | Full presigned URL of the source. Must pass the allowlist. |
+| `input.url` | yes | Full URL of the source (https). |
 | `input.filename` | yes | Plain file name, no directories. Used for the downloaded file and the frames folder name. |
 | `input.size` | yes | Exact byte size; checked after download and used for the disk-space check. |
 | `input.sha256` | no | Lower-case hex. When present the download is verified against it. |
@@ -78,23 +78,16 @@ refresh them. If a link expires before or during the download the job fails with
 link live long enough for a large download plus the time the user spends choosing folders
 (hours, not minutes).
 
-## 3. Allowlist
+## 3. Where the helper may fetch from
 
-The helper fetches only from origins compiled into it (`src-tauri/src/config.rs`), in two
-lists:
+**Anywhere over https.** There is no host allowlist, so a well-formed link is the only trigger.
+The rules:
 
-- **`MANIFEST_ORIGINS`**: where a link may point.
-- **`MEDIA_ORIGINS`**: where a manifest may send the helper for inputs.
-
-An entry is a host plus a path prefix. A URL matches when **all** of these hold:
-
-- it is `https://`
-- its host is exactly the entry's host (subdomains don't count)
-- it has no port and no user-info
-- its path starts with the entry's prefix
-
-HTTP redirects are not followed. Debug builds also accept `http://127.0.0.1:<port>` under any
-listed prefix, for the local mock server.
+- The manifest URL and every URL inside it are `https://`, with no user-info.
+- Redirects are followed up to five hops, and never to plain http.
+- The setup screen shows the manifest's host (*From*), so the user sees where a job came from
+  before pressing Start. Nothing runs until they do.
+- Debug builds also accept `http://127.0.0.1:<port>` for local mock servers.
 
 ## 4. Op `video_to_png`
 

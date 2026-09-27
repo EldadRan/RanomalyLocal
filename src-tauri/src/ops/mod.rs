@@ -8,7 +8,7 @@
 //! 3. Add `src/ops/<name>.ts` for its setup screen and register it in `src/ops/index.ts`.
 //! 4. Document its manifest fields in docs/manifest.md.
 //!
-//! Everything else — links, allowlist, state, the running/done/partial/failed screens,
+//! Everything else — links and their checks, state, the running/done/partial/failed screens,
 //! progress, Cancel, sleep prevention, one-job-at-a-time, quitting — is shared.
 
 use std::path::PathBuf;

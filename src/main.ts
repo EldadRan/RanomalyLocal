@@ -11,7 +11,7 @@ type Unit = "bytes" | "frames" | "items";
 type View =
   | { state: "idle" }
   | { state: "loading" }
-  | { state: "ready"; op: string; title: string; job_id: string | null; details: unknown }
+  | { state: "ready"; op: string; source: string; title: string; job_id: string | null; details: unknown }
   | { state: "running"; title: string; stages: string[]; stage: number }
   | { state: "partial"; title: string; message: string; facts: Fact[] }
   | { state: "done"; title: string; facts: Fact[]; warning: string | null; can_open: boolean }
@@ -59,7 +59,7 @@ function build(v: View): (Node | false | null | undefined)[] {
     case "ready": {
       const ui = ops[v.op];
       if (!ui) return build({ state: "failed", message: `this version has no screen for "${v.op}"` });
-      return ui.ready({ title: v.title, jobId: v.job_id, details: v.details, onLeave: (fn) => leave.push(fn) });
+      return ui.ready({ title: v.title, source: v.source, jobId: v.job_id, details: v.details, onLeave: (fn) => leave.push(fn) });
     }
     case "running":
       running = runningScreen(v);

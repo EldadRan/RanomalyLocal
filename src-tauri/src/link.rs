@@ -1,4 +1,4 @@
-//! Strict parsing of `ranomalyext://` links and the R2 allowlist.
+//! Strict parsing of `ranomalyext://` links, and the https rule for every URL.
 //!
 //! Any web page can open a `ranomalyext://` link, so nothing in the link is trusted except
 //! a URL that points into one of our own R2 buckets.
@@ -13,11 +13,11 @@ pub enum LinkError {
     TooLong,
     #[error("the link is not a valid Ranomaly link")]
     Malformed,
-    #[error("the link points outside AAB storage")]
-    NotAllowed,
+    #[error("the link must point to an https address")]
+    NotHttps,
 }
 
-/// Parses `ranomalyext://run?manifest=<encoded url>` and returns the allowlisted manifest URL.
+/// Parses `ranomalyext://run?manifest=<encoded url>` and returns the manifest URL.
 pub fn parse_link(raw: &str) -> Result<Url, LinkError> {
     if raw.len() > config::MAX_LINK_BYTES {
         return Err(LinkError::TooLong);
@@ -39,34 +39,21 @@ pub fn parse_link(raw: &str) -> Result<Url, LinkError> {
         _ => return Err(LinkError::Malformed),
     };
     let url = Url::parse(&manifest).map_err(|_| LinkError::Malformed)?;
-    check_allowed(&url, config::MANIFEST_ORIGINS)?;
+    check_url(&url)?;
     Ok(url)
 }
 
-/// Accepts a URL only if it matches one of `origins` (see `config`).
-pub fn check_allowed(url: &Url, origins: &[config::Origin]) -> Result<(), LinkError> {
-    if !url.username().is_empty() || url.password().is_some() || url.fragment().is_some() {
-        return Err(LinkError::NotAllowed);
+/// Any https URL without embedded credentials. Debug builds also take http://127.0.0.1 for the
+/// local mock servers. There is no host allowlist (see `config`).
+pub fn check_url(url: &Url) -> Result<(), LinkError> {
+    if !url.username().is_empty() || url.password().is_some() || url.host_str().is_none() {
+        return Err(LinkError::Malformed);
     }
-    let path = url.path();
-    let prefix_ok = |o: &config::Origin| path.starts_with(o.path_prefix);
-    // Debug builds only: the local mock server, on any port, under an allowlisted path.
-    if cfg!(debug_assertions)
-        && url.scheme() == "http"
-        && url.host_str() == Some("127.0.0.1")
-        && origins.iter().any(prefix_ok)
-    {
-        return Ok(());
+    let local_dev = cfg!(debug_assertions) && url.scheme() == "http" && url.host_str() == Some("127.0.0.1");
+    if url.scheme() != "https" && !local_dev {
+        return Err(LinkError::NotHttps);
     }
-    if url.scheme() != "https" || url.port().is_some() {
-        return Err(LinkError::NotAllowed);
-    }
-    let host = url.host_str().ok_or(LinkError::NotAllowed)?.to_ascii_lowercase();
-    if origins.iter().any(|o| o.host.eq_ignore_ascii_case(&host) && prefix_ok(o)) {
-        Ok(())
-    } else {
-        Err(LinkError::NotAllowed)
-    }
+    Ok(())
 }
 
 /// Unix time at which a SigV4-presigned URL stops working, if it says so.
@@ -106,56 +93,42 @@ fn parse_amz_date(s: &str) -> Option<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use config::{MANIFEST_ORIGINS as M, MEDIA_ORIGINS as MEDIA};
 
     fn link_for(target: &str) -> String {
         let enc: String = url::form_urlencoded::byte_serialize(target.as_bytes()).collect();
         format!("ranomalyext://run?manifest={enc}")
     }
 
-    fn allowed(u: &str, origins: &[config::Origin]) -> bool {
-        check_allowed(&Url::parse(u).unwrap(), origins).is_ok()
+    fn ok(u: &str) -> bool {
+        check_url(&Url::parse(u).unwrap()).is_ok()
     }
 
     #[test]
-    fn accepts_listed_origins() {
-        let target = "https://acct.r2.cloudflarestorage.com/aab-temp/m/abc.json?X-Amz-Expires=600";
+    fn accepts_any_https_url() {
+        let target = "https://delivery.example.test/t/abc?sig=1";
         assert_eq!(parse_link(&link_for(target)).unwrap().as_str(), target);
-        assert!(allowed("https://API.example.test/ext/manifests/0f3a", M));
-        assert!(allowed("https://delivery.example.test/anything?sig=1", MEDIA));
+        assert!(ok("https://anything.example/any/path.json"));
+        assert!(ok("https://host:8443/x"));
     }
 
     #[test]
-    fn rejects_everything_else() {
-        for bad in [
-            "https://acct.r2.cloudflarestorage.com/other-bucket/x.json",
-            "https://acct.r2.cloudflarestorage.com/aab-temp-2/x.json",
-            "https://acct.r2.cloudflarestorage.com/",
-            "http://acct.r2.cloudflarestorage.com/aab-temp/x.json",
-            "https://acct.r2.cloudflarestorage.com:8443/aab-temp/x.json",
-            "https://evil.example/aab-temp/x.json",
-            "https://x.acct.r2.cloudflarestorage.com/aab-temp/x.json",
-            "https://acct.r2.cloudflarestorage.com.evil.example/aab-temp/x.json",
-            "https://u:p@acct.r2.cloudflarestorage.com/aab-temp/x.json",
-            "https://acct.r2.cloudflarestorage.com/aab-temp/../other/x.json",
-            // A media origin is not a manifest origin, and the reverse.
-            "https://delivery.example.test/x.json",
-        ] {
-            assert!(!allowed(bad, M), "{bad}");
-        }
-        assert!(!allowed("https://api.example.test/ext/manifests/x", MEDIA));
+    fn rejects_plain_http_and_credentials() {
+        assert_eq!(check_url(&Url::parse("http://example.test/x").unwrap()), Err(LinkError::NotHttps));
+        assert!(!ok("ftp://example.test/x"));
+        assert!(!ok("file:///etc/passwd"));
+        assert!(!ok("https://u:p@example.test/x"));
+        assert!(parse_link(&link_for("http://example.test/m.json")).is_err());
     }
 
     #[test]
-    fn debug_builds_accept_the_local_mock_under_listed_paths() {
-        assert!(allowed("http://127.0.0.1:8765/aab-temp/m.json", M));
-        assert!(!allowed("http://127.0.0.1:8765/elsewhere/m.json", M));
-        assert!(!allowed("http://localhost:8765/aab-temp/m.json", M));
+    fn debug_builds_accept_the_local_mock() {
+        assert!(ok("http://127.0.0.1:8765/aab-temp/m.json"));
+        assert!(!ok("http://localhost:8765/aab-temp/m.json"));
     }
 
     #[test]
     fn rejects_malformed_links() {
-        let good = "https://acct.r2.cloudflarestorage.com/aab-temp/x.json";
+        let good = "https://delivery.example.test/m";
         let enc: String = url::form_urlencoded::byte_serialize(good.as_bytes()).collect();
         for bad in [
             format!("ranomalyext://other?manifest={enc}"),

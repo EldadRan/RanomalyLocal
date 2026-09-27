@@ -4,7 +4,7 @@ An **op** is one tool the helper can run: `video_to_png` today. AAB chooses it w
 manifest's `op` field. Each op is one Rust module and one TypeScript module. Everything around
 them is shared, and an op gets it without writing any of it:
 
-- the link and the allowlist
+- the link and its checks
 - manifest fetching
 - one job at a time
 - the running, done, partial and error screens
@@ -42,7 +42,7 @@ AAB link ─► shell fetches manifest ─► ops::prepare(envelope, doc)  ─�
 
 ## Rules an op must keep
 
-- **Validate every manifest field.** URLs go through `manifest::media_url` (the media allowlist),
+- **Validate every manifest field.** URLs go through `manifest::media_url` (https only),
   file names through `manifest::check_filename`, and display strings through
   `manifest::display_text`. The manifest comes from the network, so treat it as hostile.
 - **Honour `ctx.cancel`** at every await that can take a while. Use `tokio::select!` on

@@ -14,11 +14,11 @@
       const views = {
         idle: { state: "idle" },
         failed: { state: "failed", message: "the download link has expired — start again from AAB" },
-        ready: { state: "ready", op: "video_to_png", title, job_id: "mock_1790504119", details: {
+        ready: { state: "ready", op: "video_to_png", source: "delivery.ranomaly.example", title, job_id: "mock_1790504119", details: {
           filename: "shot 012 plate ü.mov", size: 131559347, expires_at: Date.now() / 1000 + 6 * 3600,
           frames: 120, width: 3840, height: 2160, fps: 24, pix_fmt: "yuv422p10le",
           source_high_bit: true, source_alpha: false } },
-        unknown_op: { state: "ready", op: "future_op", title, job_id: null, details: {} },
+        unknown_op: { state: "ready", op: "future_op", source: "delivery.ranomaly.example", title, job_id: null, details: {} },
         running: { state: "running", title, stages: ["Download", "Check", "Decode", "Finish"], stage: 2 },
         partial: { state: "partial", title, message: "Cancelled.", facts: [
           { label: "Written", value: "37 frames", mono: true }, { label: "Folder", value: dir, mono: false }] },

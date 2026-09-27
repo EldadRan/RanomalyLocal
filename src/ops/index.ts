@@ -7,6 +7,8 @@ import { videoToPng } from "./video_to_png";
 
 export interface ReadyContext {
   title: string;
+  /** Host the manifest came from; show it so the user sees where the job originates. */
+  source: string;
   jobId: string | null;
   /** The op's own data from Rust (`Job::details`). */
   details: any;

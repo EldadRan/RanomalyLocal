@@ -52,6 +52,7 @@ export const videoToPng: OpUI = {
       d.pix_fmt && fact("Format", d.pix_fmt, true),
     ]);
     info.append(h("dt", {}, "Link"), expiry);
+    info.append(h("dt", {}, "From"), h("dd", { class: "num" }, ctx.source));
     if (ctx.jobId) info.append(h("dt", {}, "Job"), h("dd", { class: "num muted" }, ctx.jobId));
 
     // ---- the user's choices

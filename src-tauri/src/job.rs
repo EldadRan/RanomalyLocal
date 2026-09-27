@@ -24,6 +24,8 @@ pub enum View {
     /// The op's setup screen: `details` is whatever that op's UI needs.
     Ready {
         op: String,
+        /// Host the manifest came from, shown so the user sees where a job originates.
+        source: String,
         title: String,
         job_id: Option<String>,
         details: Value,
@@ -112,7 +114,16 @@ pub fn focus_window(app: &AppHandle) {
 
 pub fn http_client() -> reqwest::Client {
     reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::none())
+        // Up to five hops, and never from https down to plain http.
+        .redirect(reqwest::redirect::Policy::custom(|attempt| {
+            if attempt.previous().len() >= 5 {
+                attempt.error("too many redirects")
+            } else if link::check_url(attempt.url()).is_err() {
+                attempt.error("redirected to a non-https address")
+            } else {
+                attempt.follow()
+            }
+        }))
         .connect_timeout(Duration::from_secs(20))
         .read_timeout(Duration::from_secs(60))
         .user_agent(concat!("Ranomaly-Local/", env!("CARGO_PKG_VERSION")))
@@ -151,16 +162,17 @@ pub fn handle_link(app: &AppHandle, raw: &str) {
             return;
         }
         match result {
-            Ok((env, job)) => ready(&app, env, job),
+            Ok((env, job)) => ready(&app, env, job, url.host_str().unwrap_or_default().to_string()),
             Err(e) => set_view(&app, View::Failed { message: e.to_string() }),
         }
     });
 }
 
-fn ready(app: &AppHandle, env: Envelope, job: Job) {
+fn ready(app: &AppHandle, env: Envelope, job: Job, source: String) {
     let title = manifest::display_text(env.title, 200).unwrap_or_else(|| job.default_title());
     let view = View::Ready {
         op: job.op().to_string(),
+        source,
         title: title.clone(),
         job_id: manifest::display_text(env.job_id, 100),
         details: job.details(),

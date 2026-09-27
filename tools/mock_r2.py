@@ -2,8 +2,8 @@
 """Local stand-in for AAB + R2, for testing a debug build of AA Ext end to end.
 
 Serves a manifest and a video with presigned-style expiry and HTTP Range, then prints the
-ranomalyext:// link AAB would open. Debug builds of AA Ext accept http://127.0.0.1 URLs
-whose first path segment is an allowed bucket; release builds never do.
+ranomalyext:// link AAB would open. Debug builds of Ranomaly Local accept http://127.0.0.1 URLs;
+release builds accept https only.
 
     python3 tools/mock_r2.py --video clip.mov            # prints the link
     python3 tools/mock_r2.py --video clip.mov --open     # and opens it (macOS)

@@ -80,11 +80,10 @@ pub async fn fetch(
 
 // ---------------------------------------------------------------- helpers for ops
 
-/// A job input URL: parsed and inside `config::MEDIA_ORIGINS`.
+/// A job input URL: https (see `link::check_url`).
 pub fn media_url(raw: &str, field: &str) -> Result<Url, ManifestError> {
     let url = Url::parse(raw).map_err(|_| ManifestError::invalid(format!("{field} is not a URL")))?;
-    link::check_allowed(&url, config::MEDIA_ORIGINS)
-        .map_err(|_| ManifestError::invalid(format!("{field} points outside the allowed locations")))?;
+    link::check_url(&url).map_err(|e| ManifestError::invalid(format!("{field}: {e}")))?;
     Ok(url)
 }
 
@@ -144,8 +143,8 @@ mod tests {
     }
 
     #[test]
-    fn media_urls_use_the_media_list() {
+    fn media_urls_must_be_https() {
         assert!(media_url("https://delivery.example.test/v.mov", "input.url").is_ok());
-        assert!(media_url("https://api.example.test/ext/manifests/x", "input.url").is_err());
+        assert!(media_url("http://delivery.example.test/v.mov", "input.url").is_err());
     }
 }
