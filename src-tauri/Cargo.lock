@@ -3,33 +3,6 @@
 version = 4
 
 [[package]]
-name = "aa-ext"
-version = "0.1.0"
-dependencies = [
- "fs2",
- "futures-util",
- "hex",
- "keepawake",
- "png 0.18.1",
- "reqwest",
- "serde",
- "serde_json",
- "serde_path_to_error",
- "sha2 0.11.0",
- "tauri",
- "tauri-build",
- "tauri-plugin-deep-link",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tauri-plugin-single-instance",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
- "tokio-util",
- "url",
-]
-
-[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3175,6 +3148,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "caa0f4137e1c0a72f4c651489402276c8e8e1cf081f3b0ba156d2cbeef09e86a"
 dependencies = [
  "rand_core",
+]
+
+[[package]]
+name = "ranomaly-local"
+version = "0.1.0"
+dependencies = [
+ "fs2",
+ "futures-util",
+ "hex",
+ "keepawake",
+ "png 0.18.1",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "sha2 0.11.0",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tauri-plugin-single-instance",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+ "url",
 ]
 
 [[package]]

@@ -430,7 +430,8 @@ mod tests {
             &plan(&probe("yuv420p", None, None, 8, false), Depth::Match),
         );
         assert!(args.contains(&"file:/in/a:b 100%.mov".to_string()));
-        assert_eq!(args.last().unwrap(), "file:/out/100%% done ü/frame_%06d.png");
+        let sep = std::path::MAIN_SEPARATOR;
+        assert_eq!(args.last().unwrap(), &format!("file:/out/100%% done ü{sep}frame_%06d.png"));
     }
 }
 

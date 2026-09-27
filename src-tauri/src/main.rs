@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    aa_ext_lib::run()
+    ranomaly_local_lib::run()
 }
