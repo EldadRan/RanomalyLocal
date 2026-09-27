@@ -62,6 +62,16 @@ fn open_output(app: AppHandle) -> Result<(), String> {
     app.opener().open_path(frames_dir, None::<&str>).map_err(|e| e.to_string())
 }
 
+/// The window follows its content's height; the webview reports it after every layout change.
+#[tauri::command]
+fn fit_window(window: tauri::WebviewWindow, height: f64) -> Result<(), String> {
+    let scale = window.scale_factor().map_err(|e| e.to_string())?;
+    let width = window.inner_size().map_err(|e| e.to_string())?.to_logical::<f64>(scale).width;
+    window
+        .set_size(tauri::LogicalSize::new(width, height.clamp(160.0, 900.0).ceil()))
+        .map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default();
@@ -111,7 +121,8 @@ pub fn run() {
             cancel,
             resolve_partial,
             dismiss,
-            open_output
+            open_output,
+            fit_window
         ])
         .run(tauri::generate_context!())
         .expect("error while running Ranomaly Ext");

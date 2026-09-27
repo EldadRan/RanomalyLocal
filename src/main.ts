@@ -145,7 +145,7 @@ function build(v: View): Node[] {
 
 // ---- ready: collect the user's choices
 
-function buildReady(m: Manifest, highBit: boolean, alpha: boolean): Node[] {
+function buildReady(m: Manifest, _highBit: boolean, alpha: boolean): Node[] {
   const opts: StartOptions = { frames_parent: "", keep_video: false, video_dir: null, depth: "eight" };
   const p = m.params;
 
@@ -197,9 +197,6 @@ function buildReady(m: Manifest, highBit: boolean, alpha: boolean): Node[] {
   const depth = h("select", {},
     h("option", { value: "eight" }, `8-bit${alphaNote}`),
     h("option", { value: "sixteen" }, `16-bit${alphaNote}`));
-  const depthHint = highBit
-    ? h("p", { class: "small warning" }, `This video is ${p.pix_fmt ?? "high bit depth"}; choose 16-bit to keep its full precision.`)
-    : null;
   depth.onchange = () => { opts.depth = depth.value as Depth; refresh(); };
 
   const disk = h("div", { class: "disk", hidden: true });
@@ -246,7 +243,7 @@ function buildReady(m: Manifest, highBit: boolean, alpha: boolean): Node[] {
         h("p", { class: "small muted" }, "A new folder named after the file is created inside it.")),
       h("label", { class: "check" }, keep, "Keep the downloaded video"),
       videoField,
-      h("div", { class: "field" }, h("label", {}, "PNG bit depth"), depth, depthHint),
+      h("div", { class: "field" }, h("label", {}, "PNG bit depth"), depth),
       disk),
     h("div", { class: "actions" },
       h("button", { onclick: () => call("dismiss") }, "Cancel"),
@@ -298,6 +295,15 @@ function onProgress(p: Progress) {
 }
 
 // ---------------------------------------------------------------- wiring
+
+let lastHeight = 0;
+new ResizeObserver(() => {
+  const height = Math.ceil(app.getBoundingClientRect().height);
+  if (height !== lastHeight) {
+    lastHeight = height;
+    invoke("fit_window", { height }).catch(() => {});
+  }
+}).observe(app);
 
 listen<View>("view", (e) => render(e.payload));
 listen<Progress>("progress", (e) => onProgress(e.payload));
