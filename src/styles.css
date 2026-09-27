@@ -1,0 +1,75 @@
+:root {
+  --bg: #f6f6f4;
+  --panel: #ffffff;
+  --ink: #1c1c1a;
+  --muted: #6b6b66;
+  --line: #e2e2dc;
+  --accent: #d6336c;
+  --accent-ink: #ffffff;
+  --ok: #2f7d4f;
+  --warn: #a86a00;
+  --bad: #b3261e;
+  --track: #ecece7;
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151514;
+    --panel: #1f1f1d;
+    --ink: #ececea;
+    --muted: #9a9a93;
+    --line: #33332f;
+    --accent: #f06595;
+    --accent-ink: #1a0a10;
+    --ok: #63c38b;
+    --warn: #e0a642;
+    --bad: #ef6b62;
+    --track: #2c2c29;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+.bar { padding: 12px 18px; font-weight: 600; letter-spacing: .02em; border-bottom: 1px solid var(--line); -webkit-user-select: none; user-select: none; }
+.mark { background: var(--accent); color: var(--accent-ink); border-radius: 4px; padding: 1px 5px; margin-right: 2px; }
+main { flex: 1; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+h1 { font-size: 17px; margin: 0; overflow-wrap: anywhere; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 13px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field > label, .label { font-size: 12px; color: var(--muted); font-weight: 500; }
+.picker { display: flex; gap: 8px; align-items: center; }
+.path { flex: 1; min-width: 0; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; font-size: 12px; direction: rtl; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); background: var(--bg); }
+.path.empty { color: var(--muted); direction: ltr; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+select { padding: 6px 8px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; }
+button { font: inherit; padding: 7px 14px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--muted); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+button.danger { color: var(--bad); }
+.actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: auto; }
+.disk { font-size: 12px; padding: 8px 10px; border-radius: 7px; background: var(--track); }
+.disk.ok { color: var(--ok); }
+.disk.warn { color: var(--warn); }
+.disk.block { color: var(--bad); }
+.steps { display: flex; gap: 6px; font-size: 12px; color: var(--muted); }
+.steps span.on { color: var(--ink); font-weight: 600; }
+.steps span.done { color: var(--ok); }
+.meter { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.meter > div { height: 100%; background: var(--accent); width: 0; transition: width .2s linear; }
+.meter.busy > div { width: 30%; animation: slide 1.1s ease-in-out infinite; }
+@keyframes slide { from { margin-left: -30%; } to { margin-left: 100%; } }
+.stats { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.error { color: var(--bad); overflow-wrap: anywhere; }
+.warning { color: var(--warn); }
+.centre { margin: auto; text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center; max-width: 320px; }
+#toast { position: fixed; left: 18px; right: 18px; bottom: 18px; padding: 10px 12px; border-radius: 8px; background: var(--ink); color: var(--bg); font-size: 13px; opacity: 0; transform: translateY(8px); transition: all .2s; pointer-events: none; }
+#toast.show { opacity: 1; transform: none; }
+.meter.loading { width: 200px; }
