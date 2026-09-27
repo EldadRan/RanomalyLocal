@@ -43,8 +43,8 @@ function build(v: View): (Node | false | null | undefined)[] {
   switch (v.state) {
     case "idle":
       return [h("div", { class: "centre" },
-        h("h1", {}, "Waiting for AAB"),
-        h("p", { class: "muted small" }, "Start a job from AAB and it opens here."))];
+        h("h1", {}, "Waiting for a job"),
+        h("p", { class: "muted small" }, "Jobs open here when you start them from a Ranomaly app."))];
     case "loading":
       return [h("div", { class: "centre" }, h("p", { class: "muted small" }, "Reading the request…"))];
     case "failed": {

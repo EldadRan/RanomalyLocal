@@ -1,6 +1,6 @@
 # Adding an op
 
-An **op** is one tool the helper can run: `video_to_png` today. AAB chooses it with the
+An **op** is one tool the helper can run: `video_to_png` today. The calling app chooses it with the
 manifest's `op` field. Each op is one Rust module and one TypeScript module. Everything around
 them is shared, and an op gets it without writing any of it:
 
@@ -15,7 +15,7 @@ them is shared, and an op gets it without writing any of it:
 ## The contract
 
 ```
-AAB link ─► shell fetches manifest ─► ops::prepare(envelope, doc)  ── picks the op by `op`
+app link ─► shell fetches manifest ─► ops::prepare(envelope, doc)  ── picks the op by `op`
                                           │
                         Job::from_manifest(doc)   parse + validate the op's own fields
                                           │
@@ -38,7 +38,7 @@ AAB link ─► shell fetches manifest ─► ops::prepare(envelope, doc)  ─�
 | Registration | `src-tauri/src/ops/mod.rs` | One `Job` variant and one arm per `match`; the compiler lists every place |
 | Setup screen | `src/ops/<op>.ts` | An `OpUI.ready(ctx)` returning the screen: job facts, the user's choices, Cancel and Start |
 | Registration | `src/ops/index.ts` | One line mapping the op name to its UI |
-| Contract | `docs/manifest.md` | A section with the op's fields, for AAB |
+| Contract | `docs/manifest.md` | A section with the op's fields, for calling apps |
 
 ## Rules an op must keep
 
@@ -75,11 +75,11 @@ AAB link ─► shell fetches manifest ─► ops::prepare(envelope, doc)  ─�
    `run` through a recording `Events` (see `video_to_png::e2e`).
 2. Add the variant and its match arms in `ops/mod.rs`.
 3. `src/ops/<op>.ts` plus one line in `src/ops/index.ts`.
-4. A `docs/manifest.md` section, and a handoff to AAB for its side.
+4. A `docs/manifest.md` section, and a handoff to each calling app for its side.
 5. Add a state for it to `tools/preview.html` and check the screen at 460 px.
 6. `cargo test`, `npm run build`, then a real run from a bundle with `tools/mock_r2.py`, or a
    mock of your own.
 
 An older helper that receives a manifest for an op it doesn't know shows *"this request needs a
-newer version of Ranomaly Local"*. That's why ops can ship on AAB's side before every user has
+newer version of Ranomaly Local"*. That's why ops can ship on a calling app's side before every user has
 updated.

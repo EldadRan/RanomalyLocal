@@ -105,7 +105,7 @@ export function chips<T extends string>(options: [T, string][], initial: T, onCh
   return h("div", { class: "seg" }, ...buttons);
 }
 
-/** An AAB toggle switch; `id` lets a <label> wrap it. */
+/** A toggle switch (design system §6); `id` lets a <label> wrap it. */
 export function toggle(id: string, onChange: (on: boolean) => void) {
   const el = h("input", { type: "checkbox", class: "toggle", id });
   el.onchange = () => onChange(el.checked);

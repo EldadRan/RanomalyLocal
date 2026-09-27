@@ -24,14 +24,26 @@ pub struct Envelope {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ManifestError {
-    #[error("the request link has expired — start again from AAB")]
-    Expired,
+    /// The server refused the manifest link; the status says why, so a mix-up is traceable.
+    #[error("{}", refused("request link", *.0))]
+    Refused(u16),
     #[error("could not fetch the request: {0}")]
     Fetch(String),
-    #[error("the request from AAB is not valid: {0}")]
+    #[error("the request is not valid: {0}")]
     Invalid(String),
     #[error("this request needs a newer version of Ranomaly Local ({0})")]
     Unsupported(String),
+}
+
+/// Wording for a link the server refused. Says what the status means and no more: a 404 is
+/// as likely a wrong link as an expired one.
+pub fn refused(what: &str, status: u16) -> String {
+    let why = match status {
+        410 => "has expired",
+        404 => "was not found — it may have expired, been used already, or be wrong",
+        _ => "was refused — it may have expired",
+    };
+    format!("the {what} {why} (HTTP {status}). Start the job again")
 }
 
 impl ManifestError {
@@ -62,8 +74,7 @@ pub async fn fetch(
         .map_err(|e| ManifestError::Fetch(e.without_url().to_string()))?;
     match resp.status().as_u16() {
         200 => {}
-        // Expired presigned URL, or a one-time manifest already used or timed out.
-        403 | 404 | 410 => return Err(ManifestError::Expired),
+        s @ (401 | 403 | 404 | 410) => return Err(ManifestError::Refused(s)),
         s => return Err(ManifestError::Fetch(format!("server answered {s}"))),
     }
     let mut body = Vec::new();
@@ -168,9 +179,17 @@ mod tests {
     fn rejects_other_versions_and_garbage() {
         assert!(matches!(parse(br#"{"version":2,"op":"x"}"#), Err(ManifestError::Unsupported(_))));
         let msg = |b: &[u8]| parse(b).unwrap_err().to_string();
-        assert_eq!(msg(b"not json"), "the request from AAB is not valid: it is not JSON");
-        assert_eq!(msg(br#"{"version":1}"#), "the request from AAB is not valid: missing op");
-        assert_eq!(msg(br#"{"version":"1","op":"x"}"#), "the request from AAB is not valid: version must be a whole number");
+        assert_eq!(msg(b"not json"), "the request is not valid: it is not JSON");
+        assert_eq!(msg(br#"{"version":1}"#), "the request is not valid: missing op");
+        assert_eq!(msg(br#"{"version":"1","op":"x"}"#), "the request is not valid: version must be a whole number");
+    }
+
+    #[test]
+    fn refusals_say_what_the_status_means() {
+        assert_eq!(ManifestError::Refused(404).to_string(),
+            "the request link was not found — it may have expired, been used already, or be wrong (HTTP 404). Start the job again");
+        assert!(ManifestError::Refused(403).to_string().contains("was refused"));
+        assert!(ManifestError::Refused(410).to_string().contains("has expired"));
     }
 
     #[test]
@@ -182,7 +201,7 @@ mod tests {
         #[allow(dead_code)]
         struct Input { size: u64, name: String, list: Vec<u8> }
         let err = |v: serde_json::Value| fields::<Op>(&v).unwrap_err().to_string();
-        let tail = |s: String| s.trim_start_matches("the request from AAB is not valid: ").to_string();
+        let tail = |s: String| s.trim_start_matches("the request is not valid: ").to_string();
         assert_eq!(tail(err(serde_json::json!({}))), "missing input");
         assert_eq!(tail(err(serde_json::json!({"input": {"name": "a", "list": []}}))), "missing input.size");
         assert_eq!(tail(err(serde_json::json!({"input": {"size": "big", "name": "a", "list": []}}))), "input.size must be a whole number");

@@ -38,7 +38,7 @@ export const videoToPng: OpUI = {
     const tick = () => {
       if (!d.expires_at) { expiry.textContent = "—"; return; }
       const left = d.expires_at - Date.now() / 1000;
-      expiry.textContent = left > 0 ? `in ${duration(left)}` : "expired — start again from AAB";
+      expiry.textContent = left > 0 ? `in ${duration(left)}` : "expired — start the job again";
       expiry.className = left > 0 ? (left < 600 ? "num warn" : "num") : "error";
     };
     tick();

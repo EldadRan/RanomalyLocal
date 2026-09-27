@@ -137,7 +137,7 @@ pub fn handle_link(app: &AppHandle, raw: &str) {
     focus_window(app);
     let state = app.state::<AppState>();
     if state.is_busy() {
-        notice(app, "A job is already running. Finish or cancel it before starting another from AAB.");
+        notice(app, "A job is already running. Finish or cancel it before starting another.");
         return;
     }
     let url = match link::parse_link(raw) {
@@ -285,7 +285,7 @@ fn remove(d: &Discard) -> std::io::Result<()> {
 }
 
 /// The app exists for one job: once the user closes the outcome (Done, Close, or Cancel before
-/// starting) it quits. AAB starts it again with the next link.
+/// starting) it quits. The calling app starts it again with the next link.
 pub fn dismiss(app: &AppHandle) {
     if !app.state::<AppState>().is_busy() {
         app.exit(0);

@@ -33,7 +33,7 @@ struct RawInput {
     size: u64,
     #[serde(default)]
     sha256: Option<String>,
-    /// Unix seconds when `url` stops working. AAB knows it because it chose the lifetime.
+    /// Unix seconds when `url` stops working. The sender knows it because it chose the lifetime.
     #[serde(default)]
     expires_at: Option<u64>,
 }
@@ -224,7 +224,7 @@ impl Job {
                     warnings.push(format!("Expected {expected} frames but wrote {written}."));
                 }
                 if self.params.frames != expected {
-                    warnings.push(format!("AAB said {} frames; the file has {expected}.", self.params.frames));
+                    warnings.push(format!("The request said {} frames; the file has {expected}.", self.params.frames));
                 }
                 let mut facts = vec![Fact::mono("Frames", written.to_string()), folder];
                 if let Some(v) = &kept_video {

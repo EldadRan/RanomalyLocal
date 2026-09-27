@@ -16,10 +16,8 @@ const MAX_STALLED_ATTEMPTS: u32 = 8;
 pub enum DownloadError {
     #[error("cancelled")]
     Cancelled,
-    #[error("the download link has expired — start again from AAB")]
-    Expired,
-    #[error("the file is no longer in AAB storage (404)")]
-    NotFound,
+    #[error("{}", crate::manifest::refused("download link", *.0))]
+    Refused(u16),
     #[error("download failed: {0}")]
     Http(String),
     #[error("the downloaded file has the wrong size ({got} bytes, expected {expected})")]
@@ -135,8 +133,7 @@ async fn one_attempt(
             }
         }
         416 if *offset == size => return Ok(Attempt::Done),
-        403 => return Err(DownloadError::Expired),
-        404 => return Err(DownloadError::NotFound),
+        s @ (401 | 403 | 404 | 410) => return Err(DownloadError::Refused(s)),
         s @ (408 | 429 | 500..=599) => return Ok(Attempt::Retry(format!("server answered {s}"))),
         s => return Err(DownloadError::Http(format!("server answered {s}"))),
     }
@@ -299,7 +296,7 @@ mod tests {
         let mode = Mode { drop_first_after: Some(300_000), expire_from: Some(1), ..Default::default() };
         let s = serve(b.clone(), mode).await;
         let (r, _d) = run(&s, &b, None, &CancellationToken::new()).await;
-        assert!(matches!(r, Err(DownloadError::Expired)), "{r:?}");
+        assert!(matches!(r, Err(DownloadError::Refused(403))), "{r:?}");
     }
 
     #[tokio::test]

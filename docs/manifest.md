@@ -1,10 +1,11 @@
 # Ranomaly Local — link and manifest contract (v1)
 
-Ranomaly Local is a desktop helper that AAB (the browser app) starts to do work that a browser
-cannot do locally. AAB writes a small JSON **manifest** to R2, then opens a
-`ranomalylocal://` link that points at it. The helper downloads the manifest, shows the
-user what it is about to do, asks for anything it needs (output folders, options), runs
-the job and reports progress to the user. Nothing is reported back to AAB.
+Ranomaly Local is a desktop helper that Ranomaly apps start to do work a browser cannot do
+locally. **AA Base is the first calling app; the helper names none of them.** A calling app
+publishes a small JSON **manifest** and opens a `ranomalylocal://` link that points at it. The helper
+fetches the manifest, shows the user what it is about to do, asks for anything it needs (output
+folders, options), runs the job and reports progress to the user. Nothing is reported back to the
+calling app, and nothing the user sees names it.
 
 ## 1. The link
 
@@ -19,7 +20,7 @@ The helper rejects the link unless **all** of these hold:
 - the whole link is at most 8 KB
 - the decoded manifest URL is https (section 3)
 
-AAB must percent-encode the full presigned URL (`encodeURIComponent`). Pasting it
+The calling app must percent-encode the full manifest URL (`encodeURIComponent`). Pasting it
 unencoded after the scheme breaks URL parsing.
 
 ## 2. The manifest
@@ -28,7 +29,7 @@ unencoded after the scheme breaks URL parsing.
 same for every op. Every other field belongs to the op named in `op`. Section 4 onward has one
 section per op. A helper that doesn't know the `op` says it needs updating.
 
-`Content-Type: application/json`, at most 64 KB. Unknown fields are ignored so AAB can
+`Content-Type: application/json`, at most 64 KB. Unknown fields are ignored so a calling app can
 add fields without breaking older helpers; `version` is bumped only for breaking changes.
 
 ```json
@@ -58,7 +59,7 @@ add fields without breaking older helpers; `version` is bumped only for breaking
 |---|---|---|
 | `version` | yes | Envelope. Must be `1`. |
 | `op` | yes | Envelope. Which tool runs. Unknown ops are rejected with "update the helper". |
-| `job_id` | no | Envelope. Shown to the user; helps support match a run to AAB. |
+| `job_id` | no | Envelope. Shown to the user; helps support match a run to the calling app. |
 | `title` | no | Envelope. Human label shown in the window. Each op has a fallback (`video_to_png`: `input.filename`). |
 | `input.url` | yes | Full URL of the source (https). |
 | `input.filename` | yes | Plain file name, no directories. Used for the downloaded file and the frames folder name. |
@@ -74,7 +75,7 @@ add fields without breaking older helpers; `version` is bumped only for breaking
 
 The manifest link and the video link are ordinary presigned GETs. The helper does not
 refresh them. If a link expires before or during the download the job fails with
-"link expired — start again from AAB", and AAB issues a fresh manifest. Make the video
+"… (HTTP 403). Start the job again", and the calling app issues a fresh manifest. Make the video
 link live long enough for a large download plus the time the user spends choosing folders
 (hours, not minutes).
 

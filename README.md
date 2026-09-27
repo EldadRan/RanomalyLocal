@@ -1,11 +1,11 @@
 # Ranomaly Local
 
-Desktop helper for AAB. AAB writes a job manifest to R2 and opens
+Desktop helper for Ranomaly apps (AA Base is the first). A calling app publishes a job manifest and opens
 `ranomalylocal://run?manifest=<presigned URL>`; Ranomaly Local fetches the manifest, asks the user
 for what it needs, runs the job locally and shows progress. First tool: `video_to_png`
 (download a video, decode it to a PNG sequence).
 
-- Contract AAB must follow: [docs/manifest.md](docs/manifest.md)
+- Contract a calling app must follow: [docs/manifest.md](docs/manifest.md)
 - ffmpeg sidecars (LGPL, how to rebuild): [docs/ffmpeg.md](docs/ffmpeg.md)
 - Adding a tool: [docs/adding-an-op.md](docs/adding-an-op.md)
 
@@ -26,7 +26,7 @@ Adding one: [docs/adding-an-op.md](docs/adding-an-op.md).
 | `src/main.ts` | the shell's screens: waiting, loading, running, done, partial, error |
 | `src/ops/` | one setup screen per op, registered in `index.ts` |
 | `src/ui.ts` | shared UI pieces (folder picker, chips, toggle, facts, toast) |
-| `tools/mock_r2.py` | local stand-in for AAB + storage for end-to-end runs |
+| `tools/mock_r2.py` | local stand-in for a calling app + storage for end-to-end runs |
 | `tools/preview.html` | every screen in a browser with IPC mocked, for layout checks |
 
 ## Develop (macOS)
