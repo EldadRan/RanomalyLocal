@@ -1,6 +1,6 @@
-//! Strict parsing of `ranomalyext://` links, and the https rule for every URL.
+//! Strict parsing of `ranomalylocal://` links, and the https rule for every URL.
 //!
-//! Any web page can open a `ranomalyext://` link, so nothing in the link is trusted except
+//! Any web page can open a `ranomalylocal://` link, so nothing in the link is trusted except
 //! a URL that points into one of our own R2 buckets.
 
 use url::Url;
@@ -17,13 +17,13 @@ pub enum LinkError {
     NotHttps,
 }
 
-/// Parses `ranomalyext://run?manifest=<encoded url>` and returns the manifest URL.
+/// Parses `ranomalylocal://run?manifest=<encoded url>` and returns the manifest URL.
 pub fn parse_link(raw: &str) -> Result<Url, LinkError> {
     if raw.len() > config::MAX_LINK_BYTES {
         return Err(LinkError::TooLong);
     }
     let link = Url::parse(raw).map_err(|_| LinkError::Malformed)?;
-    if link.scheme() != "ranomalyext"
+    if link.scheme() != "ranomalylocal"
         || link.host_str() != Some("run")
         || !(link.path().is_empty() || link.path() == "/")
         || link.fragment().is_some()
@@ -96,7 +96,7 @@ mod tests {
 
     fn link_for(target: &str) -> String {
         let enc: String = url::form_urlencoded::byte_serialize(target.as_bytes()).collect();
-        format!("ranomalyext://run?manifest={enc}")
+        format!("ranomalylocal://run?manifest={enc}")
     }
 
     fn ok(u: &str) -> bool {
@@ -131,13 +131,13 @@ mod tests {
         let good = "https://delivery.example.test/m";
         let enc: String = url::form_urlencoded::byte_serialize(good.as_bytes()).collect();
         for bad in [
-            format!("ranomalyext://other?manifest={enc}"),
-            format!("ranomalyext://run/extra?manifest={enc}"),
-            format!("ranomalyext://run?manifest={enc}&x=1"),
-            format!("ranomalyext://run?manifest={enc}#frag"),
+            format!("ranomalylocal://other?manifest={enc}"),
+            format!("ranomalylocal://run/extra?manifest={enc}"),
+            format!("ranomalylocal://run?manifest={enc}&x=1"),
+            format!("ranomalylocal://run?manifest={enc}#frag"),
             format!("otherscheme://run?manifest={enc}"),
-            "ranomalyext://run".into(),
-            "ranomalyext://run?manifest=not%20a%20url".into(),
+            "ranomalylocal://run".into(),
+            "ranomalylocal://run?manifest=not%20a%20url".into(),
         ] {
             assert!(parse_link(&bad).is_err(), "{bad}");
         }

@@ -1,7 +1,7 @@
 # Ranomaly Local
 
 Desktop helper for AAB. AAB writes a job manifest to R2 and opens
-`ranomalyext://run?manifest=<presigned URL>`; Ranomaly Local fetches the manifest, asks the user
+`ranomalylocal://run?manifest=<presigned URL>`; Ranomaly Local fetches the manifest, asks the user
 for what it needs, runs the job locally and shows progress. First tool: `video_to_png`
 (download a video, decode it to a PNG sequence).
 
@@ -17,7 +17,7 @@ Adding one: [docs/adding-an-op.md](docs/adding-an-op.md).
 | Path | What |
 |---|---|
 | `src-tauri/src/config.rs` | limits (link and manifest size); there is no host allowlist |
-| `src-tauri/src/link.rs` | strict `ranomalyext://` parsing; URLs must be https |
+| `src-tauri/src/link.rs` | strict `ranomalylocal://` parsing; URLs must be https |
 | `src-tauri/src/manifest.rs` | the envelope (`version`, `op`, `job_id`, `title`), fetch, validators for ops |
 | `src-tauri/src/job.rs` | the shell: state the window mirrors, start / cancel / keep-or-delete / quit |
 | `src-tauri/src/ops/mod.rs` | the op registry and contract (`Job`, `Ctx`, `Events`, `Outcome`) |

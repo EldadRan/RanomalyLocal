@@ -2,7 +2,7 @@
 """Local stand-in for AAB + R2, for testing a debug build of AA Ext end to end.
 
 Serves a manifest and a video with presigned-style expiry and HTTP Range, then prints the
-ranomalyext:// link AAB would open. Debug builds of Ranomaly Local accept http://127.0.0.1 URLs;
+ranomalylocal:// link AAB would open. Debug builds of Ranomaly Local accept http://127.0.0.1 URLs;
 release builds accept https only.
 
     python3 tools/mock_r2.py --video clip.mov            # prints the link
@@ -163,7 +163,7 @@ def main() -> None:
 
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     manifest_url = presign(base, f"/{MANIFEST_BUCKET}/{manifest['job_id']}.json", args.manifest_expires)
-    link = "ranomalyext://run?manifest=" + urllib.parse.quote(manifest_url, safe="")
+    link = "ranomalylocal://run?manifest=" + urllib.parse.quote(manifest_url, safe="")
     print(json.dumps(manifest, indent=2))
     print(f"\nLink:\n{link}\n", flush=True)
     if args.open:

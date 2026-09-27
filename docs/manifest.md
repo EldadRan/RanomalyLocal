@@ -2,19 +2,19 @@
 
 Ranomaly Local is a desktop helper that AAB (the browser app) starts to do work that a browser
 cannot do locally. AAB writes a small JSON **manifest** to R2, then opens a
-`ranomalyext://` link that points at it. The helper downloads the manifest, shows the
+`ranomalylocal://` link that points at it. The helper downloads the manifest, shows the
 user what it is about to do, asks for anything it needs (output folders, options), runs
 the job and reports progress to the user. Nothing is reported back to AAB.
 
 ## 1. The link
 
 ```
-ranomalyext://run?manifest=<percent-encoded presigned R2 URL of the manifest>
+ranomalylocal://run?manifest=<percent-encoded presigned R2 URL of the manifest>
 ```
 
 The helper rejects the link unless **all** of these hold:
 
-- scheme is `ranomalyext`, host is `run`, path is empty or `/`
+- scheme is `ranomalylocal`, host is `run`, path is empty or `/`
 - the query has exactly one parameter, `manifest`, and nothing else (no fragment)
 - the whole link is at most 8 KB
 - the decoded manifest URL is https (section 3)

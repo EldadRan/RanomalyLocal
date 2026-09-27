@@ -34,6 +34,7 @@ keepawake = "0.6.1"
 thiserror = "2.0.21"
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "stream", "http2", "system-proxy"] }
 tokio-util = "0.7.19"
+serde_path_to_error = "0.1.20"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

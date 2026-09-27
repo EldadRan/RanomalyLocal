@@ -4,6 +4,7 @@
 //! is the op's own, and the op parses it from the same document (`ops::prepare`).
 
 use futures_util::StreamExt;
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use url::Url;
 
@@ -27,7 +28,7 @@ pub enum ManifestError {
     Expired,
     #[error("could not fetch the request: {0}")]
     Fetch(String),
-    #[error("the request is not valid: {0}")]
+    #[error("the request from AAB is not valid: {0}")]
     Invalid(String),
     #[error("this request needs a newer version of Ranomaly Local ({0})")]
     Unsupported(String),
@@ -42,9 +43,8 @@ impl ManifestError {
 /// Parses the envelope and hands back the whole document for the op to parse.
 pub fn parse(bytes: &[u8]) -> Result<(Envelope, serde_json::Value), ManifestError> {
     let doc: serde_json::Value =
-        serde_json::from_slice(bytes).map_err(|e| ManifestError::invalid(e.to_string()))?;
-    let env: Envelope =
-        serde_json::from_value(doc.clone()).map_err(|e| ManifestError::invalid(e.to_string()))?;
+        serde_json::from_slice(bytes).map_err(|_| ManifestError::invalid("it is not JSON"))?;
+    let env: Envelope = fields(&doc)?;
     if env.version != VERSION {
         return Err(ManifestError::Unsupported(format!("manifest version {}", env.version)));
     }
@@ -79,6 +79,43 @@ pub async fn fetch(
 }
 
 // ---------------------------------------------------------------- helpers for ops
+
+/// Reads typed fields out of the manifest. Errors name the field in the manifest's own
+/// terms ("missing params.width", "input.size must be a whole number"), never parser jargon.
+pub fn fields<T: DeserializeOwned>(doc: &serde_json::Value) -> Result<T, ManifestError> {
+    serde_path_to_error::deserialize(doc).map_err(|e| {
+        let path = e.path().to_string();
+        ManifestError::Invalid(describe(&path, &e.into_inner().to_string()))
+    })
+}
+
+fn describe(path: &str, msg: &str) -> String {
+    let msg = msg.split(" at line ").next().unwrap_or(msg);
+    let at = |field: &str| if path == "." { field.to_string() } else { format!("{path}.{field}") };
+    if let Some(field) = msg.strip_prefix("missing field `").and_then(|r| r.split('`').next()) {
+        return format!("missing {}", at(field));
+    }
+    let expected = msg.rsplit("expected ").next().unwrap_or("");
+    let kind = if msg.contains("expected ") {
+        match expected {
+            e if e.starts_with('u') || e.starts_with('i') => "a whole number",
+            e if e.starts_with('f') => "a number",
+            "a string" => "text",
+            "a boolean" => "true or false",
+            e if e.starts_with("a sequence") => "a list",
+            e if e.starts_with("struct") || e.starts_with("a map") => "an object",
+            _ => expected,
+        }
+    } else {
+        ""
+    };
+    match (path, kind) {
+        (".", "") => msg.to_string(),
+        (".", k) => format!("expected {k}"),
+        (p, "") => format!("{p}: {msg}"),
+        (p, k) => format!("{p} must be {k}"),
+    }
+}
 
 /// A job input URL: https (see `link::check_url`).
 pub fn media_url(raw: &str, field: &str) -> Result<Url, ManifestError> {
@@ -130,8 +167,27 @@ mod tests {
     #[test]
     fn rejects_other_versions_and_garbage() {
         assert!(matches!(parse(br#"{"version":2,"op":"x"}"#), Err(ManifestError::Unsupported(_))));
-        assert!(matches!(parse(b"not json"), Err(ManifestError::Invalid(_))));
-        assert!(matches!(parse(br#"{"version":1}"#), Err(ManifestError::Invalid(_))));
+        let msg = |b: &[u8]| parse(b).unwrap_err().to_string();
+        assert_eq!(msg(b"not json"), "the request from AAB is not valid: it is not JSON");
+        assert_eq!(msg(br#"{"version":1}"#), "the request from AAB is not valid: missing op");
+        assert_eq!(msg(br#"{"version":"1","op":"x"}"#), "the request from AAB is not valid: version must be a whole number");
+    }
+
+    #[test]
+    fn field_errors_name_the_field() {
+        #[derive(Deserialize, Debug)]
+        #[allow(dead_code)]
+        struct Op { input: Input }
+        #[derive(Deserialize, Debug)]
+        #[allow(dead_code)]
+        struct Input { size: u64, name: String, list: Vec<u8> }
+        let err = |v: serde_json::Value| fields::<Op>(&v).unwrap_err().to_string();
+        let tail = |s: String| s.trim_start_matches("the request from AAB is not valid: ").to_string();
+        assert_eq!(tail(err(serde_json::json!({}))), "missing input");
+        assert_eq!(tail(err(serde_json::json!({"input": {"name": "a", "list": []}}))), "missing input.size");
+        assert_eq!(tail(err(serde_json::json!({"input": {"size": "big", "name": "a", "list": []}}))), "input.size must be a whole number");
+        assert_eq!(tail(err(serde_json::json!({"input": {"size": 1, "name": 5, "list": []}}))), "input.name must be text");
+        assert_eq!(tail(err(serde_json::json!({"input": {"size": 1, "name": "a", "list": 3}}))), "input.list must be a list");
     }
 
     #[test]

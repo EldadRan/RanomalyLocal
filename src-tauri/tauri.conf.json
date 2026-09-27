@@ -30,7 +30,7 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["ranomalyext"]
+        "schemes": ["ranomalylocal"]
       }
     }
   },

@@ -42,7 +42,8 @@ AAB link ─► shell fetches manifest ─► ops::prepare(envelope, doc)  ─�
 
 ## Rules an op must keep
 
-- **Validate every manifest field.** URLs go through `manifest::media_url` (https only),
+- **Validate every manifest field.** Read fields with `manifest::fields` so errors name the
+  field. URLs go through `manifest::media_url` (https only),
   file names through `manifest::check_filename`, and display strings through
   `manifest::display_text`. The manifest comes from the network, so treat it as hostile.
 - **Honour `ctx.cancel`** at every await that can take a while. Use `tokio::select!` on

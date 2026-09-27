@@ -63,10 +63,10 @@ pub struct Job {
 
 impl Job {
     pub fn from_manifest(doc: Value) -> Result<Self, ManifestError> {
-        let raw: Raw = serde_json::from_value(doc).map_err(|e| ManifestError::invalid(e.to_string()))?;
+        let raw: Raw = manifest::fields(&doc)?;
         let url = manifest::media_url(&raw.input.url, "input.url")?;
         let filename = manifest::check_filename(&raw.input.filename)
-            .ok_or_else(|| ManifestError::invalid("input.filename"))?;
+            .ok_or_else(|| ManifestError::invalid("input.filename is not a usable file name"))?;
         if raw.input.size == 0 {
             return Err(ManifestError::invalid("input.size must be greater than 0"));
         }
@@ -74,12 +74,12 @@ impl Job {
             Some(h) if h.len() == 64 && h.bytes().all(|c| c.is_ascii_hexdigit()) => {
                 Some(h.to_ascii_lowercase())
             }
-            Some(_) => return Err(ManifestError::invalid("input.sha256 must be 64 hex characters")),
+            Some(_) => return Err(ManifestError::invalid("input.sha256 must be 64 hexadecimal characters")),
             None => None,
         };
         let p = &raw.params;
         if p.frames == 0 || p.width == 0 || p.height == 0 || p.width > 65536 || p.height > 65536 {
-            return Err(ManifestError::invalid("params.frames, width and height must be positive"));
+            return Err(ManifestError::invalid("params.frames, width and height must be greater than 0"));
         }
         let (high_bit, alpha) = ffmpeg::guess_depth(p.pix_fmt.as_deref().unwrap_or(""));
         Ok(Job {
