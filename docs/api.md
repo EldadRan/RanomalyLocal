@@ -262,4 +262,21 @@ python3 tools/mock_r2.py --video clip.mov --video-expires 30 --throttle 5   # ex
 
 ## Download
 
-Installers: *link to follow* (macOS `.dmg`, Windows setup `.exe`).
+These links always serve the newest release, so a *Get Ranomaly Local* button can use them as they
+are:
+
+| Platform | Link |
+|---|---|
+| Windows 10/11 (x64) | https://github.com/EldadRan/RanomalyLocal/releases/latest/download/RanomalyLocal-windows-x64-setup.exe |
+| macOS 11+ (Apple silicon) | https://github.com/EldadRan/RanomalyLocal/releases/latest/download/RanomalyLocal-macos-arm64.dmg |
+| All releases | https://github.com/EldadRan/RanomalyLocal/releases |
+
+The Windows installer registers `ranomalylocal://`, installs for the current user and needs no
+admin rights. On macOS, drag the app into Applications.
+
+**Installers are not code-signed yet.**
+
+- **Windows:** SmartScreen shows *"Windows protected your PC"*. Choose *More info → Run anyway*.
+- **macOS:** the first launch needs right-click → *Open*.
+
+Signing comes in a later release.

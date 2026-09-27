@@ -44,7 +44,8 @@ function build(v: View): (Node | false | null | undefined)[] {
     case "idle":
       return [h("div", { class: "centre" },
         h("h1", {}, "Waiting for a job"),
-        h("p", { class: "muted small" }, "Jobs open here when you start them from a Ranomaly app."))];
+        h("p", { class: "muted small" }, "Jobs open here when you start them from a Ranomaly app."),
+        h("button", { class: "link", onclick: () => call("open_licenses") }, "Licenses"))];
     case "loading":
       return [h("div", { class: "centre" }, h("p", { class: "muted small" }, "Reading the request…"))];
     case "failed": {

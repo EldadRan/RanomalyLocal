@@ -42,6 +42,15 @@ Adding one: [docs/adding-an-op.md](docs/adding-an-op.md).
    - Windows `-debug` also accepts `http://127.0.0.1`, for testing with a local mock.
    - macOS `-release` is the `.dmg`.
 
+**Releases:** push a tag `vX.Y.Z` matching `version` in `src-tauri/tauri.conf.json`. CI then
+publishes `RanomalyLocal-windows-x64-setup.exe` and `RanomalyLocal-macos-arm64.dmg` to a GitHub
+Release. `…/releases/latest/download/<name>` always serves the newest (links in
+[docs/api.md](docs/api.md#download)).
+
+**Licences:** third-party notices ship inside the app (`src-tauri/licenses/`) and open from the
+*Licenses* link on the waiting screen. That covers FFmpeg's LGPL obligations (see
+[docs/ffmpeg.md](docs/ffmpeg.md)).
+
 All installers are unsigned for now. Development happens on a Mac, so every Windows build comes
 from CI.
 

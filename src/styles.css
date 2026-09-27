@@ -83,6 +83,8 @@ button.primary { height: 34px; padding: 0 16px; font-size: 13px; font-weight: 60
 button.primary:hover { background: var(--fg-dim); border-color: var(--fg-dim); }
 button.secondary { height: 34px; }
 button.danger:hover { color: var(--danger); }
+button.link { height: auto; padding: 2px 0; border: none; background: none; color: var(--muted); font: 500 10px/1.4 var(--mono); letter-spacing: .6px; text-transform: uppercase; }
+button.link:hover { background: none; color: var(--fg-dim); }
 .actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; padding-top: 2px; }
 
 /* Selection triad (§6). */

@@ -63,6 +63,18 @@ fn open_output(app: AppHandle) -> Result<(), String> {
     app.opener().open_path(path.display().to_string(), None::<&str>).map_err(|e| e.to_string())
 }
 
+/// Opens the bundled third-party notices (FFmpeg's LGPL obligations).
+#[tauri::command]
+fn open_licenses(app: AppHandle) -> Result<(), String> {
+    let path = app
+        .path()
+        .resource_dir()
+        .map_err(|e| e.to_string())?
+        .join("licenses")
+        .join("THIRD-PARTY-NOTICES.txt");
+    app.opener().open_path(path.display().to_string(), None::<&str>).map_err(|e| e.to_string())
+}
+
 /// The window follows its content: the webview reports how many CSS pixels it is short
 /// (positive) or over (negative), and the window's inner height changes by that much.
 #[tauri::command]
@@ -125,7 +137,8 @@ pub fn run() {
             resolve_partial,
             dismiss,
             open_output,
-            fit_window
+            fit_window,
+            open_licenses
         ])
         .run(tauri::generate_context!())
         .expect("error while running Ranomaly Local");

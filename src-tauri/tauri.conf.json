@@ -38,6 +38,7 @@
     "active": true,
     "targets": ["app", "dmg", "nsis"],
     "externalBin": ["binaries/ffmpeg", "binaries/ffprobe"],
+    "resources": { "licenses/": "licenses/" },
     "category": "Utility",
     "shortDescription": "Local helper for AAB",
     "icon": [
