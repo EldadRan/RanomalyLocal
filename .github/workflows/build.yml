@@ -113,6 +113,16 @@ jobs:
       - name: Release bundle
         run: npx tauri build --bundles ${{ matrix.bundles }}
 
+      # A downloaded app whose bundle isn't signed as a whole is reported as "damaged" by macOS.
+      # Until Developer ID signing, the bundle is signed ad-hoc (signingIdentity "-"); this
+      # fails the build if that ever stops covering the app and its sidecars.
+      - name: Verify app signature (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          app="src-tauri/target/release/bundle/macos/Ranomaly Local.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign -dv "$app" 2>&1 | grep -E "Signature|Sealed Resources"
+
       - name: Debug bundle (Windows, for local mock testing)
         if: runner.os == 'Windows'
         run: npx tauri build --debug --bundles nsis

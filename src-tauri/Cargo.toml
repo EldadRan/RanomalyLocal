@@ -1,6 +1,6 @@
 [package]
 name = "ranomaly-local"
-version = "0.1.0"
+version = "0.1.1"
 description = "Ranomaly Local — desktop helper for Ranomaly apps"
 authors = ["Ranomaly"]
 edition = "2021"
